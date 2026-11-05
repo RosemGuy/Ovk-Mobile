@@ -1,0 +1,238 @@
+#import "OVKAPI.h"
+#import <Security/Security.h>
+#import "OVKTrust.h"
+NSString *OVKString(id v) { return [v isKindOfClass:[NSString class]] ? v : ([v isKindOfClass:[NSNumber class]] ? [v stringValue] : @""); }
+NSDictionary *OVKDictionary(id v) { return [v isKindOfClass:[NSDictionary class]] ? v : @{}; }
+NSArray *OVKArray(id v) { return [v isKindOfClass:[NSArray class]] ? v : @[]; }
+NSString *OVKEncode(NSString *v) {
+    return CFBridgingRelease(CFURLCreateStringByAddingPercentEscapes(NULL, (__bridge CFStringRef)v, NULL, CFSTR("!*'();:@&=+$,/?%#[]\" "), kCFStringEncodingUTF8));
+}
+NSDictionary *OVKQuery(NSString *query) {
+    NSMutableDictionary *result = [NSMutableDictionary dictionary];
+    for (NSString *pair in [query componentsSeparatedByString:@"&"]) {
+        NSRange equal = [pair rangeOfString:@"="];
+        if (equal.location == NSNotFound) continue;
+        NSString *key = [[[pair substringToIndex:equal.location] stringByReplacingOccurrencesOfString:@"+" withString:@" "] stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+        NSString *val = [[[pair substringFromIndex:equal.location+1] stringByReplacingOccurrencesOfString:@"+" withString:@" "] stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+        if (key && val) result[key] = val;
+    }
+    return result;
+}
+static id OVKCleanJSON(id value) {
+    if ([value isKindOfClass:[NSDictionary class]]) {
+        NSMutableDictionary *result = [NSMutableDictionary dictionary];
+        for (NSString *key in value) { id item = OVKCleanJSON(value[key]); if (item) result[key] = item; }
+        return result;
+    }
+    if ([value isKindOfClass:[NSArray class]]) {
+        NSMutableArray *result = [NSMutableArray array];
+        for (id item in value) { id clean = OVKCleanJSON(item); if (clean) [result addObject:clean]; }
+        return result;
+    }
+    return value == [NSNull null] ? nil : value;
+}
+static NSError *OVKError(NSInteger code, NSString *message) {
+    return [NSError errorWithDomain:@"OpenVK" code:code userInfo:@{NSLocalizedDescriptionKey:message ?: @"Ошибка сервера"}];
+}
+// One request owns its connection until completion. All callbacks run on the main thread.
+@interface OVKRequest : NSObject <NSURLConnectionDataDelegate, OVKCancellable>
+@property (strong, nonatomic) NSURLConnection *connection;
+@property (strong, nonatomic) NSMutableData *data;
+@property (strong, nonatomic) NSURL *origin;
+@property (copy, nonatomic) OVKCompletion completion;
+@property (assign, nonatomic) NSInteger status;
+@property (assign, nonatomic) BOOL tokenResponse;
+@property (copy, nonatomic) NSString *mimeType;
+@property (copy, nonatomic) NSString *responseServer;
+- (void)start:(NSURLRequest *)request completion:(OVKCompletion)completion;
+@end
+@implementation OVKRequest
+- (void)start:(NSURLRequest *)request completion:(OVKCompletion)completion {
+    self.completion = completion; self.origin = request.URL; self.data = [NSMutableData data];
+    NSMutableURLRequest *configured = [request mutableCopy];
+    [configured setValue:@"application/json" forHTTPHeaderField:@"Accept"];
+    [configured setValue:[OVKAPI requestUserAgent] forHTTPHeaderField:@"User-Agent"];
+    configured.HTTPShouldHandleCookies = YES; request = configured;
+    self.connection = [[NSURLConnection alloc] initWithRequest:request delegate:self startImmediately:YES];
+    if (!self.connection) [self finish:nil error:OVKError(-1,@"Не удалось создать подключение")];
+}
+- (void)cancel { [self finish:nil error:OVKError(NSURLErrorCancelled,@"Вход отменён")]; }
+- (void)finish:(id)result error:(NSError *)error {
+    OVKCompletion callback = self.completion;
+    self.completion = nil; [self.connection cancel]; self.connection = nil;
+    if (callback) callback(result,error);
+}
+- (void)connection:(NSURLConnection *)connection willSendRequestForAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge {
+    if (![challenge.protectionSpace.authenticationMethod isEqualToString:NSURLAuthenticationMethodServerTrust]) { [challenge.sender performDefaultHandlingForAuthenticationChallenge:challenge]; return; }
+    NSString *host = challenge.protectionSpace.host;
+    NSString *path = [[NSBundle mainBundle] pathForResource:@"ISRG-Root-X1" ofType:@"cer"];
+    NSData *root = path ? [NSData dataWithContentsOfFile:path] : nil;
+    BOOL sameHost = [host caseInsensitiveCompare:self.origin.host ?: @""] == NSOrderedSame;
+    if (sameHost && OVKEvaluateServerTrust(challenge.protectionSpace.serverTrust,host,root)) {
+        [challenge.sender useCredential:[NSURLCredential credentialForTrust:challenge.protectionSpace.serverTrust] forAuthenticationChallenge:challenge];
+    } else {
+        [challenge.sender cancelAuthenticationChallenge:challenge];
+        NSString *message = [NSString stringWithFormat:@"Не удалось проверить сертификат %@. Проверены имя сервера, срок действия и цепочка доверия, включая ISRG Root X1. Системная дата: %@.",host,[NSDate date]];
+        [self finish:nil error:[NSError errorWithDomain:NSURLErrorDomain code:NSURLErrorServerCertificateUntrusted userInfo:@{NSLocalizedDescriptionKey:message}]];
+    }
+}
+- (NSURLRequest *)connection:(NSURLConnection *)connection willSendRequest:(NSURLRequest *)request redirectResponse:(NSURLResponse *)response {
+    if (!response) return request;
+    NSURL *url = request.URL;
+    if (![url.scheme isEqualToString:self.origin.scheme] || ![url.host isEqualToString:self.origin.host] || ![(url.port ?: @443) isEqual:(self.origin.port ?: @443)]) {
+        [self finish:nil error:OVKError(-2,@"API перенаправляет на другой сервер. Укажите его адрес на экране входа.")]; return nil;
+    }
+    return request;
+}
+- (NSCachedURLResponse *)connection:(NSURLConnection *)connection willCacheResponse:(NSCachedURLResponse *)response { return nil; }
+- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response {
+    self.status = [(NSHTTPURLResponse *)response statusCode]; self.mimeType = response.MIMEType;
+    NSDictionary *headers = [(NSHTTPURLResponse *)response allHeaderFields];
+    self.responseServer = OVKString(headers[@"Server"] ?: headers[@"server"]); [self.data setLength:0];
+}
+- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data {
+    if (self.data.length + data.length > 8*1024*1024) { [self finish:nil error:OVKError(-3,@"Ответ сервера слишком большой")]; return; }
+    [self.data appendData:data];
+}
+- (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error {
+    // Older NSURLConnection may surface a 401 validation JSON as cancelled authentication.
+    if (self.tokenResponse && self.status == 401 && self.data.length && [error.domain isEqualToString:NSURLErrorDomain] && error.code == NSURLErrorUserCancelledAuthentication) { [self connectionDidFinishLoading:connection]; return; }
+    [self finish:nil error:error];
+}
+- (void)connectionDidFinishLoading:(NSURLConnection *)connection {
+    NSError *parseError = nil;
+    id json = [NSJSONSerialization JSONObjectWithData:self.data options:0 error:&parseError];
+    NSDictionary *root = OVKDictionary(OVKCleanJSON(json));
+    if (parseError || ![json isKindOfClass:[NSDictionary class]]) {
+        NSString *diagnostic = [NSString stringWithFormat:@"HTTP %ld: ответ не является JSON.\nАдрес: %@%@\nТип: %@; сервер: %@\nUser-Agent: %@\n%@",(long)self.status,self.origin.host ?: @"",self.origin.path ?: @"",self.mimeType ?: @"не указан",self.responseServer.length ? self.responseServer : @"не указан",[OVKAPI requestUserAgent], self.status == 403 ? @"Сервер отказал в запросе. Это не ответ API о неверном пароле." : @"Проверьте адрес API и доступ к серверу."];
+        [self finish:nil error:OVKError((self.status < 200 || self.status >= 300) ? self.status : -4,diagnostic)]; return;
+    }
+    if (self.tokenResponse) {
+        NSString *token = OVKString(root[@"access_token"]);
+        if (self.status >= 200 && self.status < 300 && token.length) { [self finish:root error:nil]; return; }
+        NSDictionary *failure = OVKDictionary(root[@"error"]); if (!failure.count) failure = root;
+        NSString *message = OVKString(failure[@"error_msg"] ?: failure[@"error_description"] ?: failure[@"error"]);
+        NSInteger code = [OVKString(failure[@"error_code"]) integerValue];
+        NSString *reason = OVKString(failure[@"error"]);
+        BOOL twoFactor = [reason isEqualToString:@"need_validation"] || root[@"validation_sid"] || [message rangeOfString:@"2FA" options:NSCaseInsensitiveSearch].location != NSNotFound;
+        if (twoFactor) { reason = @"need_validation"; message = @"Сервер запросил одноразовый код двухфакторной авторизации."; }
+        else if (code == 28 || [reason isEqualToString:@"invalid_password"]) { reason = @"invalid_password"; message = @"Неверный логин или пароль аккаунта выбранного инстанса."; }
+        else if (root[@"request_uri"]) message = @"Сервер требует дополнительную веб-проверку. Используйте альтернативный веб-вход.";
+        if (!message.length) message = [NSString stringWithFormat:@"Сервер не выдал токен (HTTP %ld). Проверьте логин, пароль и адрес инстанса.",(long)self.status];
+        NSDictionary *info = @{NSLocalizedDescriptionKey:message,@"OVKAuthReason":reason.length ? reason : @"server_error"};
+        [self finish:nil error:[NSError errorWithDomain:@"OpenVK" code:code ?: ((self.status >= 200 && self.status < 300) ? -6 : self.status) userInfo:info]]; return;
+    }
+    NSDictionary *failure = OVKDictionary(root[@"error"]);
+    if (failure.count || root[@"error_code"]) {
+        if (!failure.count) failure = root;
+        [self finish:nil error:OVKError([failure[@"error_code"] integerValue],OVKString(failure[@"error_msg"]))]; return;
+    }
+    if ([root[@"error"] isKindOfClass:[NSString class]]) { [self finish:nil error:OVKError(self.status,OVKString(root[@"error_description"] ?: root[@"error"]))]; return; }
+    if (self.status < 200 || self.status >= 300) { [self finish:nil error:OVKError(self.status,[NSString stringWithFormat:@"HTTP %ld: %@",(long)self.status,OVKString(root[@"message"]).length ? OVKString(root[@"message"]) : @"запрос отклонён сервером"])]; return; }
+    if (!root[@"response"] || root[@"response"] == [NSNull null]) { [self finish:nil error:OVKError(-5,@"В ответе API отсутствует response")]; return; }
+    [self finish:root[@"response"] error:nil];
+}
+@end
+@implementation OVKAPI
++ (NSString *)requestUserAgent { return @"curl"; }
++ (OVKAPI *)shared { static OVKAPI *api; static dispatch_once_t once; dispatch_once(&once, ^{ api = [[OVKAPI alloc] init]; api.server = @"https://openvk.xyz"; api.siteServer = api.server;
+    NSString *savedAPI = [[NSUserDefaults standardUserDefaults] stringForKey:@"OVKSelectedAPI"]; NSString *savedSite = [[NSUserDefaults standardUserDefaults] stringForKey:@"OVKSelectedSite"];
+    if (savedAPI.length && savedSite.length) { NSString *validAPI = [OVKAPI validatedServer:savedAPI]; NSString *validSite = [OVKAPI validatedServer:savedSite]; if (validAPI && validSite) { api.server = validAPI; api.siteServer = validSite; } }
+ }); return api; }
++ (NSString *)validatedServer:(NSString *)input {
+    NSString *value = [input stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if ([value rangeOfString:@"://"].location == NSNotFound) value = [@"https://" stringByAppendingString:value];
+    NSURL *url = [NSURL URLWithString:value];
+    if (![url.scheme.lowercaseString isEqualToString:@"https"] || !url.host.length || url.user || url.password || url.query || url.fragment || (url.path.length && ![url.path isEqualToString:@"/"])) return nil;
+    return [NSString stringWithFormat:@"https://%@%@",url.host.lowercaseString,url.port ? [NSString stringWithFormat:@":%@",url.port] : @""];
+}
+- (id<OVKCancellable>)checkConnection:(OVKCompletion)completion {
+    NSURL *url = [NSURL URLWithString:[self.server stringByAppendingString:@"/method/ovk.test?v=5.131"]];
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url cachePolicy:NSURLRequestReloadIgnoringLocalCacheData timeoutInterval:20]; request.HTTPShouldHandleCookies = YES;
+    OVKRequest *task = [[OVKRequest alloc] init]; [task start:request completion:completion]; return task;
+}
+- (id<OVKCancellable>)authenticateUsername:(NSString *)username password:(NSString *)password code:(NSString *)code completion:(OVKCompletion)completion {
+    NSMutableDictionary *params = [@{@"username":username,@"password":password,@"grant_type":@"password",@"v":@"5.131",@"2fa_supported":@"1",@"client_name":@"openvk_legacy_ios"} mutableCopy];
+    if (code.length) params[@"code"] = code;
+    NSMutableArray *parts = [NSMutableArray array];
+    for (NSString *key in [[params allKeys] sortedArrayUsingSelector:@selector(compare:)]) [parts addObject:[NSString stringWithFormat:@"%@=%@",OVKEncode(key),OVKEncode(OVKString(params[key]))]];
+    NSURL *url = [NSURL URLWithString:[self.server stringByAppendingString:@"/token"]];
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url cachePolicy:NSURLRequestReloadIgnoringLocalCacheData timeoutInterval:30];
+    request.HTTPMethod = @"POST"; request.HTTPShouldHandleCookies = YES;
+    [request setValue:@"application/x-www-form-urlencoded; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
+    request.HTTPBody = [[parts componentsJoinedByString:@"&"] dataUsingEncoding:NSUTF8StringEncoding];
+    OVKRequest *task = [[OVKRequest alloc] init]; task.tokenResponse = YES;
+    [task start:request completion:completion]; return task;
+}
+- (NSMutableDictionary *)keychainQuery {
+    return [@{(__bridge id)kSecClass:(__bridge id)kSecClassGenericPassword,(__bridge id)kSecAttrService:@"OpenVKClassic.Session",(__bridge id)kSecAttrAccount:@"current"} mutableCopy];
+}
+- (BOOL)save {
+    NSMutableDictionary *q = [self keychainQuery];
+    NSData *data = [NSJSONSerialization dataWithJSONObject:@{@"server":self.server,@"site":self.siteServer ?: self.server,@"token":self.token,@"id":self.userID ?: @0} options:0 error:NULL];
+    OSStatus status = SecItemUpdate((__bridge CFDictionaryRef)q,(__bridge CFDictionaryRef)@{(__bridge id)kSecValueData:data});
+    if (status == errSecItemNotFound) {
+        q[(__bridge id)kSecValueData] = data;
+        q[(__bridge id)kSecAttrAccessible] = (__bridge id)kSecAttrAccessibleWhenUnlockedThisDeviceOnly;
+        status = SecItemAdd((__bridge CFDictionaryRef)q,NULL);
+    }
+    return status == errSecSuccess;
+}
+- (BOOL)restore {
+    NSMutableDictionary *q = [self keychainQuery]; q[(__bridge id)kSecReturnData] = @YES;
+    CFTypeRef result = NULL;
+    if (SecItemCopyMatching((__bridge CFDictionaryRef)q,&result) != errSecSuccess) return NO;
+    NSData *data = CFBridgingRelease(result);
+    NSDictionary *s = OVKDictionary([NSJSONSerialization JSONObjectWithData:data options:0 error:NULL]);
+    NSString *server = [OVKAPI validatedServer:OVKString(s[@"server"])];
+    if (!server || !OVKString(s[@"token"]).length || [s[@"id"] integerValue] <= 0) return NO;
+    self.server = server; self.siteServer = [OVKAPI validatedServer:OVKString(s[@"site"])] ?: ([server isEqualToString:@"https://api.openvk.org"] ? @"https://openvk.org" : server); self.token = s[@"token"]; self.userID = s[@"id"]; return YES;
+}
+- (void)logout {
+    NSURL *serverURL = [NSURL URLWithString:self.server];
+    NSString *host = [serverURL host];
+    NSURL *siteURL = [NSURL URLWithString:self.siteServer ?: self.server]; NSString *siteHost = [siteURL host];
+    for (NSHTTPCookie *cookie in [[NSHTTPCookieStorage sharedHTTPCookieStorage] cookies]) {
+        NSString *domain = [cookie.domain hasPrefix:@"."] ? [cookie.domain substringFromIndex:1] : cookie.domain;
+        if ([host isEqualToString:domain] || [host hasSuffix:[@"." stringByAppendingString:domain]] || [siteHost isEqualToString:domain] || [siteHost hasSuffix:[@"." stringByAppendingString:domain]]) [[NSHTTPCookieStorage sharedHTTPCookieStorage] deleteCookie:cookie];
+    }
+    SecItemDelete((__bridge CFDictionaryRef)[self keychainQuery]);
+    self.token = nil; self.userID = nil; self.demo = NO;
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"OVKLogout" object:nil];
+}
+- (void)call:(NSString *)method parameters:(NSDictionary *)parameters completion:(OVKCompletion)completion {
+    if (self.demo) {
+        NSString *path = [[NSBundle mainBundle] pathForResource:@"Demo" ofType:@"json"];
+        NSDictionary *fixtures = OVKDictionary([NSJSONSerialization JSONObjectWithData:[NSData dataWithContentsOfFile:path] options:0 error:NULL]);
+        id response = fixtures[method];
+        if ([method isEqualToString:@"users.get"] && parameters[@"user_ids"]) {
+            NSMutableArray *users = [NSMutableArray array];
+            for (NSDictionary *user in OVKArray(fixtures[@"demo.users"])) if ([OVKString(user[@"id"]) isEqualToString:OVKString(parameters[@"user_ids"])]) [users addObject:user];
+            response = users;
+        }
+        if ([method isEqualToString:@"wall.get"]) {
+            NSMutableArray *posts = [NSMutableArray array];
+            for (NSDictionary *post in OVKArray(fixtures[@"demo.posts"])) if ([OVKString(post[@"owner_id"]) isEqualToString:OVKString(parameters[@"owner_id"])]) [posts addObject:post];
+            response = @{@"count":@(posts.count),@"items":posts,@"profiles":fixtures[@"demo.users"]};
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{ completion(response,response ? nil : OVKError(-10,@"В деморежиме отправка отключена")); }); return;
+    }
+    if (!self.token.length) { completion(nil,OVKError(5,@"Войдите в аккаунт")); return; }
+    NSString *sessionToken = [self.token copy];
+    NSMutableDictionary *params = [parameters mutableCopy]; params[@"v"] = @"5.131"; params[@"access_token"] = self.token;
+    NSMutableArray *parts = [NSMutableArray array];
+    for (NSString *key in [[params allKeys] sortedArrayUsingSelector:@selector(compare:)]) [parts addObject:[NSString stringWithFormat:@"%@=%@",OVKEncode(key),OVKEncode(OVKString(params[key]))]];
+    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"%@/method/%@",self.server,method]];
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url cachePolicy:NSURLRequestReloadIgnoringLocalCacheData timeoutInterval:30];
+    request.HTTPMethod = @"POST"; request.HTTPShouldHandleCookies = YES;
+    [request setValue:[@"Bearer " stringByAppendingString:self.token] forHTTPHeaderField:@"Authorization"];
+    [request setValue:@"application/x-www-form-urlencoded; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
+    request.HTTPBody = [[parts componentsJoinedByString:@"&"] dataUsingEncoding:NSUTF8StringEncoding];
+    OVKRequest *task = [[OVKRequest alloc] init];
+    [task start:request completion:^(id response, NSError *error) {
+        if (![sessionToken isEqualToString:self.token]) return;
+        completion(response,error);
+        if ([error.domain isEqualToString:@"OpenVK"] && error.code == 5) [self logout];
+    }];
+}
+@end

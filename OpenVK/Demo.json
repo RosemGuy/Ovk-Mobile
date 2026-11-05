@@ -1,0 +1,514 @@
+{
+  "users.get": [
+    {
+      "id": 1,
+      "first_name": "Алексей",
+      "last_name": "Соколов",
+      "photo_100": "demo:DemoAlex",
+      "status": "Возвращаемся в 2012-й.",
+      "online": 1,
+      "city": {
+        "city": "Санкт-Петербург"
+      },
+      "counters": {
+        "friends": 42,
+        "photos": 18
+      }
+    }
+  ],
+  "friends.get": {
+    "count": 2,
+    "items": [
+      {
+        "id": 2,
+        "first_name": "Анна",
+        "last_name": "Морозова",
+        "photo_100": "demo:DemoAnna",
+        "status": "Ловлю свет и хорошие моменты",
+        "online": 1
+      },
+      {
+        "id": 3,
+        "first_name": "Дмитрий",
+        "last_name": "Волков",
+        "photo_100": "demo:Avatar",
+        "online": 0
+      }
+    ]
+  },
+  "newsfeed.get": {
+    "items": [
+      {
+        "id": 42,
+        "owner_id": 1,
+        "source_id": 1,
+        "from_id": 1,
+        "date": 1793857800,
+        "text": "Проверка медиа: фотография, короткое видео и аудиотон. Нажмите на запись, затем откройте вложения.",
+        "likes": {
+          "count": 3
+        },
+        "attachments": [
+          {
+            "type": "photo",
+            "photo": {
+              "id": 21,
+              "owner_id": 1,
+              "photo_604": "demo:DemoPhoto"
+            }
+          },
+          {
+            "type": "video",
+            "video": {
+              "id": 23,
+              "owner_id": 1,
+              "title": "Демо: горы",
+              "url": "demo:DemoClip.mp4",
+              "photo_320": "demo:DemoPhoto",
+              "duration": 2
+            }
+          },
+          {
+            "type": "audio",
+            "audio": {
+              "id": 22,
+              "owner_id": 1,
+              "artist": "OpenVK Classic",
+              "title": "Проверочный тон",
+              "url": "demo:DemoAudio.wav",
+              "duration": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "post_id": 12,
+        "source_id": 2,
+        "owner_id": 2,
+        "from_id": 2,
+        "date": 1793857800,
+        "text": "Иногда для хорошего дня достаточно просто выйти на прогулку.\n\nДелюсь маленьким кусочком осени.",
+        "likes": {
+          "count": 12
+        },
+        "attachments": [
+          {
+            "type": "photo",
+            "photo": {
+              "photo_604": "demo:DemoPhoto"
+            }
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "source_id": -1,
+        "from_id": -1,
+        "owner_id": -1,
+        "date": 1793854200,
+        "text": "Помните, когда на стене писали друзьям, а новые сообщения ждали как маленькое событие?\n\nДобро пожаловать домой.",
+        "likes": {
+          "count": 28
+        }
+      },
+      {
+        "id": 10,
+        "source_id": 1,
+        "from_id": 1,
+        "owner_id": 1,
+        "date": 1793850000,
+        "text": "OpenVK на моём старом iPhone. Синие панели, квадратные аватарки и никакой спешки.",
+        "likes": {
+          "count": 7
+        }
+      }
+    ],
+    "profiles": [
+      {
+        "id": 1,
+        "first_name": "Алексей",
+        "last_name": "Соколов",
+        "photo_100": "demo:DemoAlex",
+        "status": "Возвращаемся в 2012-й.",
+        "online": 1,
+        "city": {
+          "city": "Санкт-Петербург"
+        },
+        "counters": {
+          "friends": 42,
+          "photos": 18
+        }
+      },
+      {
+        "id": 2,
+        "first_name": "Анна",
+        "last_name": "Морозова",
+        "photo_100": "demo:DemoAnna",
+        "status": "Ловлю свет и хорошие моменты",
+        "online": 1
+      },
+      {
+        "id": 3,
+        "first_name": "Дмитрий",
+        "last_name": "Волков",
+        "photo_100": "demo:Avatar",
+        "online": 0
+      }
+    ],
+    "groups": [
+      {
+        "id": 1,
+        "name": "Старый добрый интернет",
+        "photo_100": "demo:DemoClub"
+      }
+    ]
+  },
+  "wall.get": {
+    "count": 1,
+    "items": [
+      {
+        "id": 10,
+        "source_id": 1,
+        "from_id": 1,
+        "owner_id": 1,
+        "date": 1793850000,
+        "text": "OpenVK на моём старом iPhone. Синие панели, квадратные аватарки и никакой спешки.",
+        "likes": {
+          "count": 7
+        }
+      }
+    ],
+    "profiles": [
+      {
+        "id": 1,
+        "first_name": "Алексей",
+        "last_name": "Соколов",
+        "photo_100": "demo:DemoAlex",
+        "status": "Возвращаемся в 2012-й.",
+        "online": 1,
+        "city": {
+          "city": "Санкт-Петербург"
+        },
+        "counters": {
+          "friends": 42,
+          "photos": 18
+        }
+      },
+      {
+        "id": 2,
+        "first_name": "Анна",
+        "last_name": "Морозова",
+        "photo_100": "demo:DemoAnna",
+        "status": "Ловлю свет и хорошие моменты",
+        "online": 1
+      },
+      {
+        "id": 3,
+        "first_name": "Дмитрий",
+        "last_name": "Волков",
+        "photo_100": "demo:Avatar",
+        "online": 0
+      }
+    ],
+    "groups": [
+      {
+        "id": 1,
+        "name": "Старый добрый интернет",
+        "photo_100": "demo:DemoClub"
+      }
+    ]
+  },
+  "messages.getConversations": {
+    "count": 2,
+    "items": [
+      {
+        "conversation": {
+          "peer": {
+            "id": 2,
+            "type": "user"
+          },
+          "unread_count": 1
+        },
+        "last_message": {
+          "id": 3,
+          "from_id": 2,
+          "date": 1793857800,
+          "text": "Привет! Как тебе новый старый клиент?",
+          "out": 0
+        }
+      },
+      {
+        "conversation": {
+          "peer": {
+            "id": 3,
+            "type": "user"
+          },
+          "unread_count": 0
+        },
+        "last_message": {
+          "id": 2,
+          "from_id": 1,
+          "date": 1793854200,
+          "text": "Увидимся вечером!",
+          "out": 1
+        }
+      }
+    ],
+    "profiles": [
+      {
+        "id": 1,
+        "first_name": "Алексей",
+        "last_name": "Соколов",
+        "photo_100": "demo:DemoAlex",
+        "status": "Возвращаемся в 2012-й.",
+        "online": 1,
+        "city": {
+          "city": "Санкт-Петербург"
+        },
+        "counters": {
+          "friends": 42,
+          "photos": 18
+        }
+      },
+      {
+        "id": 2,
+        "first_name": "Анна",
+        "last_name": "Морозова",
+        "photo_100": "demo:DemoAnna",
+        "status": "Ловлю свет и хорошие моменты",
+        "online": 1
+      },
+      {
+        "id": 3,
+        "first_name": "Дмитрий",
+        "last_name": "Волков",
+        "photo_100": "demo:Avatar",
+        "online": 0
+      }
+    ]
+  },
+  "messages.getHistory": {
+    "count": 3,
+    "items": [
+      {
+        "id": 3,
+        "from_id": 2,
+        "date": 1793857800,
+        "text": "Привет! Как тебе новый старый клиент?",
+        "out": 0
+      },
+      {
+        "id": 2,
+        "from_id": 1,
+        "date": 1793854200,
+        "text": "Привет! Уже на iOS 6 :)",
+        "out": 1
+      },
+      {
+        "id": 1,
+        "from_id": 2,
+        "date": 1793850000,
+        "text": "Нашла свой старый iPhone. Давай проверим OpenVK?",
+        "out": 0
+      }
+    ],
+    "profiles": [
+      {
+        "id": 1,
+        "first_name": "Алексей",
+        "last_name": "Соколов",
+        "photo_100": "demo:DemoAlex",
+        "status": "Возвращаемся в 2012-й.",
+        "online": 1,
+        "city": {
+          "city": "Санкт-Петербург"
+        },
+        "counters": {
+          "friends": 42,
+          "photos": 18
+        }
+      },
+      {
+        "id": 2,
+        "first_name": "Анна",
+        "last_name": "Морозова",
+        "photo_100": "demo:DemoAnna",
+        "status": "Ловлю свет и хорошие моменты",
+        "online": 1
+      },
+      {
+        "id": 3,
+        "first_name": "Дмитрий",
+        "last_name": "Волков",
+        "photo_100": "demo:Avatar",
+        "online": 0
+      }
+    ]
+  },
+  "demo.users": [
+    {
+      "id": 1,
+      "first_name": "Алексей",
+      "last_name": "Соколов",
+      "photo_100": "demo:DemoAlex",
+      "status": "Возвращаемся в 2012-й.",
+      "online": 1,
+      "city": {
+        "city": "Санкт-Петербург"
+      },
+      "counters": {
+        "friends": 42,
+        "photos": 18
+      }
+    },
+    {
+      "id": 2,
+      "first_name": "Анна",
+      "last_name": "Морозова",
+      "photo_100": "demo:DemoAnna",
+      "status": "Ловлю свет и хорошие моменты",
+      "online": 1
+    },
+    {
+      "id": 3,
+      "first_name": "Дмитрий",
+      "last_name": "Волков",
+      "photo_100": "demo:Avatar",
+      "online": 0
+    }
+  ],
+  "demo.posts": [
+    {
+      "id": 12,
+      "post_id": 12,
+      "source_id": 2,
+      "owner_id": 2,
+      "from_id": 2,
+      "date": 1793857800,
+      "text": "Иногда для хорошего дня достаточно просто выйти на прогулку.\n\nДелюсь маленьким кусочком осени.",
+      "likes": {
+        "count": 12
+      },
+      "attachments": [
+        {
+          "type": "photo",
+          "photo": {
+            "photo_604": "demo:DemoPhoto"
+          }
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "source_id": -1,
+      "from_id": -1,
+      "owner_id": -1,
+      "date": 1793854200,
+      "text": "Помните, когда на стене писали друзьям, а новые сообщения ждали как маленькое событие?\n\nДобро пожаловать домой.",
+      "likes": {
+        "count": 28
+      }
+    },
+    {
+      "id": 10,
+      "source_id": 1,
+      "from_id": 1,
+      "owner_id": 1,
+      "date": 1793850000,
+      "text": "OpenVK на моём старом iPhone. Синие панели, квадратные аватарки и никакой спешки.",
+      "likes": {
+        "count": 7
+      }
+    },
+    {
+      "id": 42,
+      "owner_id": 1,
+      "source_id": 1,
+      "from_id": 1,
+      "date": 1793857800,
+      "text": "Проверка медиа: фотография, короткое видео и аудиотон. Нажмите на запись, затем откройте вложения.",
+      "likes": {
+        "count": 3
+      },
+      "attachments": [
+        {
+          "type": "photo",
+          "photo": {
+            "id": 21,
+            "owner_id": 1,
+            "photo_604": "demo:DemoPhoto"
+          }
+        },
+        {
+          "type": "video",
+          "video": {
+            "id": 23,
+            "owner_id": 1,
+            "title": "Демо: горы",
+            "url": "demo:DemoClip.mp4",
+            "photo_320": "demo:DemoPhoto",
+            "duration": 2
+          }
+        },
+        {
+          "type": "audio",
+          "audio": {
+            "id": 22,
+            "owner_id": 1,
+            "artist": "OpenVK Classic",
+            "title": "Проверочный тон",
+            "url": "demo:DemoAudio.wav",
+            "duration": 2
+          }
+        }
+      ]
+    }
+  ],
+  "photos.getAll": {
+    "count": 1,
+    "items": [
+      {
+        "id": 21,
+        "owner_id": 1,
+        "photo_604": "demo:DemoPhoto"
+      }
+    ]
+  },
+  "audio.get": {
+    "count": 1,
+    "items": [
+      {
+        "id": 22,
+        "owner_id": 1,
+        "artist": "OpenVK Classic",
+        "title": "Проверочный тон",
+        "url": "demo:DemoAudio.wav",
+        "duration": 2
+      }
+    ]
+  },
+  "video.get": {
+    "count": 1,
+    "items": [
+      {
+        "id": 23,
+        "owner_id": 1,
+        "title": "Демо: горы",
+        "url": "demo:DemoClip.mp4",
+        "photo_320": "demo:DemoPhoto",
+        "duration": 2
+      }
+    ]
+  },
+  "audio.getById": [
+    {
+      "id": 22,
+      "owner_id": 1,
+      "artist": "OpenVK Classic",
+      "title": "Проверочный тон",
+      "url": "demo:DemoAudio.wav",
+      "duration": 2
+    }
+  ]
+}

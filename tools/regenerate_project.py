@@ -6,19 +6,22 @@ objs=[]
 def obj(key,body):objs.append(uid(key)+' = { '+body+' };');return uid(key)
 files=[];sources=[];resources=[]
 for p in sorted(a.iterdir()):
+ # Only known source/resource files belong in the application. Editor backups stay on disk.
+ if p.name.startswith('.') or not p.is_file():continue
  if p.name=='Info.plist':typ='text.plist.xml'
- elif p.is_dir():typ='folder'
  elif p.suffix=='.m':typ='sourcecode.c.objc'
+ elif p.suffix=='.c':typ='sourcecode.c.c'
  elif p.suffix=='.h':typ='sourcecode.c.h'
  elif p.suffix=='.json':typ='text.json'
  elif p.suffix in ['.cer','.wav','.mp4']:typ='file'
- else:typ='image.png'
+ elif p.suffix.lower()=='.png':typ='image.png'
+ else:continue
  ref=obj('file'+p.name,f'isa = PBXFileReference; lastKnownFileType = {typ}; path = "{p.name}"; sourceTree = "<group>";');files.append(ref)
- if p.suffix=='.m' or typ in ['folder','image.png','text.json','file']:
+ if p.suffix in ['.m','.c'] or typ in ['folder','image.png','text.json','file']:
   build=obj('build'+p.name,f'isa = PBXBuildFile; fileRef = {ref};')
-  (sources if p.suffix=='.m' else resources).append(build)
+  (sources if p.suffix in ['.m','.c'] else resources).append(build)
 frameworks=[];frameworkrefs=[]
-for name in ['UIKit','Foundation','CoreGraphics','Security','QuartzCore','ImageIO','CoreMedia','MediaPlayer','AVFoundation']:
+for name in ['UIKit','Foundation','CoreGraphics','Security','QuartzCore','ImageIO','CoreMedia','MediaPlayer','AVFoundation','AudioToolbox']:
  ref=obj(name,f'isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = {name}.framework; path = System/Library/Frameworks/{name}.framework; sourceTree = SDKROOT;');frameworkrefs.append(ref)
  frameworks.append(obj('build'+name,f'isa = PBXBuildFile; fileRef = {ref};'))
 prod=obj('product','isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenVKClassic.app; sourceTree = BUILT_PRODUCTS_DIR;')

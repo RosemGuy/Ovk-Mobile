@@ -1,3 +1,4 @@
+#import "OVKLanguage.h"
 #import "OVKMediaModel.h"
 #import "OVKAPI.h"
 NSString *OVKMediaURL(NSString *value) {
@@ -45,19 +46,19 @@ NSString *OVKVideoAudioURL(NSDictionary *video) {
 }
 NSString *OVKDirectVideoURL(NSDictionary *video) { NSArray *urls=OVKVideoURLs(video); return urls.count ? urls[0] : @""; }
 NSArray *OVKPlayableAttachments(NSDictionary *post) {
-    if ([OVKString(post[@"explicit"]) boolValue]) return @[];
+    if ([OVKString(post[@"explicit"]) boolValue] || [OVKString(post[@"is_explicit"]) boolValue]) return @[];
     NSMutableArray *result = [NSMutableArray array];
     for (id value in OVKArray(post[@"attachments"])) {
         NSDictionary *a = OVKDictionary(value); NSString *type = OVKString(a[@"type"]); NSDictionary *object = OVKDictionary(a[type]);
         NSString *title = OVKString(object[@"title"]), *url = @"", *preview = @"";
-        if ([type isEqualToString:@"photo"]) { url = OVKPhotoSource(object); preview = url; if (!title.length) title = @"Фотография"; }
+        if ([type isEqualToString:@"photo"]) { url = OVKPhotoSource(object); preview = url; if (!title.length) title = OVKL(@"Фотография"); }
         else if ([type isEqualToString:@"audio"]) { url = OVKMediaURL(OVKString(object[@"url"])); NSString *artist = OVKString(object[@"artist"]); if (artist.length) title = [NSString stringWithFormat:@"%@ — %@",artist,title]; }
         else if ([type isEqualToString:@"video"]) { url = OVKDirectVideoURL(object); preview = OVKMediaURL(OVKString(object[@"photo_800"] ?: object[@"photo_320"] ?: object[@"photo_130"])); if (!preview.length) preview = OVKPhotoSource(@{@"sizes":OVKArray(object[@"image"] ?: object[@"images"])}); }
         else if ([type isEqualToString:@"audio_message"] || [type isEqualToString:@"voice"] || [type isEqualToString:@"doc"]) {
             NSDictionary *voice = [type isEqualToString:@"doc"] ? OVKDictionary(OVKDictionary(object[@"preview"])[@"audio_msg"]) : object;
             if (!voice.count) continue; type = @"audio"; url = OVKMediaURL(OVKString(voice[@"link_mp3"])); title = @"Голосовое сообщение";
         } else continue;
-        if (!title.length) title = [type isEqualToString:@"audio"] ? @"Аудиозапись" : @"Видеозапись";
+        if (!title.length) title = [type isEqualToString:@"audio"] ? OVKL(@"Аудиозапись") : OVKL(@"Видеозапись");
         [result addObject:@{@"type":type,@"title":title,@"url":url,@"preview":preview,@"object":object}];
     }
     // Reposts remain separate records, respecting the nested explicit flag.

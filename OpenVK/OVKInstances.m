@@ -1,3 +1,4 @@
+#import "OVKLanguage.h"
 #import "OVKUI.h"
 #import "OVKAPI.h"
 // Protocol/interaction reference: OvkisserLiteiOS, archive 76f30a71ca684e09c85c42ba0c4d8841c818147f.
@@ -9,22 +10,22 @@
 @end
 @implementation OVKAddInstanceController
 - (void)viewDidLoad {
-    [super viewDidLoad]; self.title = @"Новый инстанс";
-    if ([self respondsToSelector:@selector(setEdgesForExtendedLayout:)]) self.edgesForExtendedLayout = UIRectEdgeNone;
+    [super viewDidLoad]; self.title = OVKL(@"Новый инстанс");
+    OVKConfigureEdges(self);
     self.view.backgroundColor = [UIColor colorWithWhite:.95 alpha:1];
-    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Добавить" style:UIBarButtonItemStyleDone target:self action:@selector(saveInstance)];
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:OVKL(@"Добавить") style:UIBarButtonItemStyleDone target:self action:@selector(saveInstance)];
     UIScrollView *scroll = [[UIScrollView alloc] initWithFrame:self.view.bounds]; scroll.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight; scroll.contentSize = CGSizeMake(320,330); [self.view addSubview:scroll];
     CGFloat width = self.view.bounds.size.width;
     self.siteField = [[UITextField alloc] initWithFrame:CGRectMake(16,25,width-32,40)]; self.apiField = [[UITextField alloc] initWithFrame:CGRectMake(16,80,width-32,40)];
-    self.siteField.placeholder = @"Сайт: example.org"; self.apiField.placeholder = @"API-домен, если отличается";
+    self.siteField.placeholder = OVKL(@"Сайт: example.org"); self.apiField.placeholder = OVKL(@"API-домен, если отличается");
     for (UITextField *field in @[self.siteField,self.apiField]) { field.borderStyle = UITextBorderStyleRoundedRect; field.keyboardType = UIKeyboardTypeURL; field.autocapitalizationType = UITextAutocapitalizationTypeNone; field.autocorrectionType = UITextAutocorrectionTypeNo; field.autoresizingMask = UIViewAutoresizingFlexibleWidth; field.font = [UIFont systemFontOfSize:14]; [scroll addSubview:field]; }
-    UILabel *help = [[UILabel alloc] initWithFrame:CGRectMake(16,139,width-32,95)]; help.backgroundColor = [UIColor clearColor]; help.font = [UIFont systemFontOfSize:13]; help.textColor = [UIColor grayColor]; help.numberOfLines = 0; help.autoresizingMask = UIViewAutoresizingFlexibleWidth; help.text = @"Укажите домен сервера OpenVK. Если API работает на том же домене, второе поле оставьте пустым. Адреса сохранятся в списке; аккаунт и пароль в списке не хранятся."; [scroll addSubview:help];
+    UILabel *help = [[UILabel alloc] initWithFrame:CGRectMake(16,139,width-32,95)]; help.backgroundColor = [UIColor clearColor]; help.font = [UIFont systemFontOfSize:13]; help.textColor = [UIColor grayColor]; help.numberOfLines = 0; help.autoresizingMask = UIViewAutoresizingFlexibleWidth; help.text = OVKL(@"Укажите домен сервера OpenVK. Если API работает на том же домене, второе поле оставьте пустым. Адреса сохранятся в списке; аккаунт и пароль в списке не хранятся."); [scroll addSubview:help];
 }
 - (void)saveInstance {
     NSString *site = [OVKAPI validatedServer:self.siteField.text];
     NSString *input = [self.apiField.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
     NSString *api = input.length ? [OVKAPI validatedServer:input] : site;
-    if (!site || !api) { OVKAlert(@"Неверный адрес",@"Введите HTTPS-домен без пути и параметров. Префикс https:// можно не указывать."); return; }
+    if (!site || !api) { OVKAlert(OVKL(@"Неверный адрес"),OVKL(@"Введите HTTPS-домен без пути и параметров. Префикс https:// можно не указывать.")); return; }
     [OVKInstancesController rememberSite:site api:api]; [self.view endEditing:YES]; if (self.saved) self.saved(); [self.navigationController popViewControllerAnimated:YES];
 }
 @end
@@ -51,10 +52,10 @@
     [[NSUserDefaults standardUserDefaults] setObject:entries forKey:@"OVKSavedInstances"];
 }
 - (id)initWithSelection:(void (^)(NSString *,NSString *))selection {
-    self = [super initWithStyle:UITableViewStylePlain]; if (self) { self.selection = selection; self.title = @"Инстансы OpenVK"; } return self;
+    self = [super initWithStyle:UITableViewStylePlain]; if (self) { self.selection = selection; self.title = OVKL(@"Инстансы OpenVK"); } return self;
 }
 - (void)viewDidLoad {
-    [super viewDidLoad]; self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Закрыть" style:UIBarButtonItemStylePlain target:self action:@selector(close)];
+    [super viewDidLoad]; self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:OVKL(@"Закрыть") style:UIBarButtonItemStylePlain target:self action:@selector(close)];
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(addInstance)];
     self.tableView.rowHeight = 65;
 }

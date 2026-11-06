@@ -7,6 +7,14 @@ project_dir="$PWD"
 stage='toolchain'
 package_dir=''
 result_file="$project_dir/Build-result.txt"
+build_diagnostics() {
+    if [ ! -f "$project_dir/build-ipa.log" ]; then echo 'Compilation has not started.'; return; fi
+    awk '
+      /error:|fatal error:|Undefined symbols|undefined reference|ld:|clang:|Command .*failed|The following build commands failed/ { remaining=7; found=1 }
+      remaining>0 { print NR ": " $0; remaining--; count++; if (count>=160) exit }
+      END { if (!found) print "No recognized diagnostic found; see the complete build-ipa.log." }
+    ' "$project_dir/build-ipa.log"
+}
 cleanup() {
     result=$?
     if [ -n "$package_dir" ]; then rm -rf "$package_dir"; fi
@@ -17,6 +25,8 @@ cleanup() {
             echo "Ovk-Mobile alpha — IPA build failed"
             echo "Stage: $stage; exit: $result"
             echo "Xcode directory: ${DEVELOPER_DIR:-not selected}"
+            echo 'Errors and failed commands (from complete build log):'
+            build_diagnostics
             echo 'Last build output:'
             if [ -f "$project_dir/build-ipa.log" ]; then tail -n 35 "$project_dir/build-ipa.log"; else echo 'Compilation has not started.'; fi
         } > "$result_file"
@@ -57,7 +67,9 @@ xcodebuild -project OpenVKClassic.xcodeproj -scheme OpenVKClassic \
 build_results=("${PIPESTATUS[@]}")
 set -e
 if [ "${build_results[0]}" -ne 0 ] || [ "${build_results[1]}" -ne 0 ]; then
-    echo 'No IPA was created. Last build messages:' >&2
+    echo 'No IPA was created. Errors from the complete log:' >&2
+    build_diagnostics >&2
+    echo 'Last build messages:' >&2
     tail -n 35 "$project_dir/build-ipa.log" >&2
     exit 1
 fi
@@ -72,7 +84,18 @@ stage='ad-hoc signature'
 package_dir="$(mktemp -d "${TMPDIR:-/tmp}/ovk-ipa.XXXXXX")"
 mkdir "$package_dir/Payload"
 ditto "$app_path" "$package_dir/Payload/OpenVKClassic.app"
-codesign --force --sign - "$package_dir/Payload/OpenVKClassic.app"
+bundle_id="$(defaults read "$package_dir/Payload/OpenVKClassic.app/Info" CFBundleIdentifier)"
+if [[ ! "$bundle_id" =~ ^[A-Za-z0-9.-]+$ ]]; then echo 'Invalid application identifier in built Info.plist.' >&2; exit 1; fi
+# Jailbreak ad-hoc build only: keep Keychain scoped to this app, without wildcard groups.
+cat > "$package_dir/Entitlements.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>application-identifier</key><string>$bundle_id</string>
+<key>keychain-access-groups</key><array><string>$bundle_id</string></array>
+</dict></plist>
+PLIST
+codesign --force --sign - --entitlements "$package_dir/Entitlements.plist" "$package_dir/Payload/OpenVKClassic.app"
 codesign --verify --verbose=2 "$package_dir/Payload/OpenVKClassic.app"
 stage='IPA packaging'
 mkdir -p "$project_dir/dist"

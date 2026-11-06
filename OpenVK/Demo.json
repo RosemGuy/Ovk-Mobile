@@ -99,7 +99,11 @@
               "photo_604": "demo:DemoPhoto"
             }
           }
-        ]
+        ],
+        "comments": {
+          "count": 2,
+          "can_post": 1
+        }
       },
       {
         "id": 11,
@@ -397,7 +401,11 @@
             "photo_604": "demo:DemoPhoto"
           }
         }
-      ]
+      ],
+      "comments": {
+        "count": 2,
+        "can_post": 1
+      }
     },
     {
       "id": 11,
@@ -510,5 +518,63 @@
       "url": "demo:DemoAudio.wav",
       "duration": 2
     }
-  ]
+  ],
+  "wall.getComments": {
+    "count": 2,
+    "can_post": 1,
+    "items": [
+      {
+        "id": 501,
+        "from_id": 2,
+        "date": 1762343400,
+        "text": "Очень красиво! Где это снято?",
+        "owner_id": 2,
+        "post_id": 12,
+        "attachments": []
+      },
+      {
+        "id": 502,
+        "from_id": 1,
+        "date": 1762343500,
+        "text": "На прогулке неподалёку от дома.",
+        "reply_to_comment": 501,
+        "owner_id": 2,
+        "post_id": 12,
+        "attachments": []
+      }
+    ],
+    "profiles": [
+      {
+        "id": 1,
+        "first_name": "Алексей",
+        "last_name": "Соколов",
+        "photo_100": "demo:DemoAlex",
+        "status": "Возвращаемся в 2012-й.",
+        "online": 1,
+        "city": {
+          "city": "Санкт-Петербург"
+        },
+        "counters": {
+          "friends": 42,
+          "photos": 18
+        }
+      },
+      {
+        "id": 2,
+        "first_name": "Анна",
+        "last_name": "Морозова",
+        "photo_100": "demo:DemoAnna",
+        "status": "Ловлю свет и хорошие моменты",
+        "online": 1
+      },
+      {
+        "id": 3,
+        "first_name": "Дмитрий",
+        "last_name": "Волков",
+        "photo_100": "demo:Avatar",
+        "online": 0
+      }
+    ],
+    "groups": []
+  }
 }

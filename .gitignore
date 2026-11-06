@@ -1,0 +1,27 @@
+# Local builds and exported packages
+/build/
+/build-ipa/
+/dist/
+/DerivedData/
+/build-ipa.log
+/Build-result.txt
+*.ipa
+*.zip
+
+# Editor backups and local caches
+.DS_Store
+*.kra
+*.kra~
+*.swp
+*~
+__pycache__/
+*.py[cod]
+xcuserdata/
+*.xcuserstate
+
+# Generated illustrative previews
+/Feed-profile-preview.png
+/Music-preview.png
+
+# App-private session data must never be committed
+sessions.json

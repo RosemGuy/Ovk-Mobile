@@ -1,3 +1,7 @@
+#import <TargetConditionals.h>
+#if TARGET_OS_IPHONE
+#import <UIKit/UIKit.h>
+#endif
 #import "OVKAPI.h"
 #import <Security/Security.h>
 #import "OVKTrust.h"
@@ -133,6 +137,10 @@ static NSError *OVKError(NSInteger code, NSString *message) {
     [self finish:root[@"response"] error:nil];
 }
 @end
+@interface OVKAPI ()
+@property (assign, nonatomic, readwrite) NSInteger keychainStatus;
+@property (assign, nonatomic, readwrite) BOOL protectedSessionStore;
+@end
 @implementation OVKAPI
 + (NSString *)requestUserAgent { return @"curl"; }
 + (OVKAPI *)shared { static OVKAPI *api; static dispatch_once_t once; dispatch_once(&once, ^{ api = [[OVKAPI alloc] init]; api.server = @"https://openvk.xyz"; api.siteServer = api.server;
@@ -167,27 +175,95 @@ static NSError *OVKError(NSInteger code, NSString *message) {
 - (NSMutableDictionary *)keychainQuery {
     return [@{(__bridge id)kSecClass:(__bridge id)kSecClassGenericPassword,(__bridge id)kSecAttrService:@"OpenVKClassic.Session",(__bridge id)kSecAttrAccount:@"current"} mutableCopy];
 }
-- (BOOL)save {
-    NSMutableDictionary *q = [self keychainQuery];
-    NSData *data = [NSJSONSerialization dataWithJSONObject:@{@"server":self.server,@"site":self.siteServer ?: self.server,@"token":self.token,@"id":self.userID ?: @0} options:0 error:NULL];
-    OSStatus status = SecItemUpdate((__bridge CFDictionaryRef)q,(__bridge CFDictionaryRef)@{(__bridge id)kSecValueData:data});
-    if (status == errSecItemNotFound) {
-        q[(__bridge id)kSecValueData] = data;
-        q[(__bridge id)kSecAttrAccessible] = (__bridge id)kSecAttrAccessibleWhenUnlockedThisDeviceOnly;
-        status = SecItemAdd((__bridge CFDictionaryRef)q,NULL);
+- (NSString *)sessionFile {
+    NSString *base=[NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory,NSUserDomainMask,YES) objectAtIndex:0];
+    return [[base stringByAppendingPathComponent:@"Ovk-Mobile"] stringByAppendingPathComponent:@"sessions.json"];
+}
+- (NSDictionary *)readVault {
+    NSData *data=nil; NSString *file=[self sessionFile];
+    if ([[NSFileManager defaultManager] fileExistsAtPath:file]) {
+        data=[NSData dataWithContentsOfFile:file]; if (!data) { self.keychainStatus=errSecInteractionNotAllowed; return nil; }
+        self.protectedSessionStore=YES;
+    } else {
+        NSMutableDictionary *q=[self keychainQuery]; q[(__bridge id)kSecReturnData]=@YES; CFTypeRef value=NULL;
+        self.keychainStatus=SecItemCopyMatching((__bridge CFDictionaryRef)q,&value);
+        if (self.keychainStatus==errSecItemNotFound) return @{};
+        if (self.keychainStatus!=errSecSuccess) return nil;
+        data=CFBridgingRelease(value); self.protectedSessionStore=NO;
     }
-    return status == errSecSuccess;
+    id value=[NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
+    if (![value isKindOfClass:[NSDictionary class]]) { self.keychainStatus=errSecDecode; return nil; }
+    return value;
 }
-- (BOOL)restore {
-    NSMutableDictionary *q = [self keychainQuery]; q[(__bridge id)kSecReturnData] = @YES;
-    CFTypeRef result = NULL;
-    if (SecItemCopyMatching((__bridge CFDictionaryRef)q,&result) != errSecSuccess) return NO;
-    NSData *data = CFBridgingRelease(result);
-    NSDictionary *s = OVKDictionary([NSJSONSerialization JSONObjectWithData:data options:0 error:NULL]);
-    NSString *server = [OVKAPI validatedServer:OVKString(s[@"server"])];
-    if (!server || !OVKString(s[@"token"]).length || [s[@"id"] integerValue] <= 0) return NO;
-    self.server = server; self.siteServer = [OVKAPI validatedServer:OVKString(s[@"site"])] ?: ([server isEqualToString:@"https://api.openvk.org"] ? @"https://openvk.org" : server); self.token = s[@"token"]; self.userID = s[@"id"]; return YES;
+- (NSArray *)accountsInVault:(NSDictionary *)vault {
+    NSMutableArray *valid=[NSMutableArray array]; NSArray *raw=[vault[@"accounts"] isKindOfClass:[NSArray class]] ? vault[@"accounts"] : (vault[@"token"] ? @[vault] : @[]);
+    for (id value in raw) { NSDictionary *entry=OVKDictionary(value); if ([OVKAPI validatedServer:OVKString(entry[@"server"])] && OVKString(entry[@"token"]).length && [entry[@"id"] longLongValue]>0) [valid addObject:entry]; }
+    return valid;
 }
+- (BOOL)canUseProtectedSessionStore {
+#if TARGET_OS_IPHONE
+    // -25308 can also occur with signing/securityd restrictions while the device is unlocked.
+    if (![[UIApplication sharedApplication] isProtectedDataAvailable]) return NO;
+    return self.keychainStatus==-34018 || self.keychainStatus==errSecNotAvailable || self.keychainStatus==errSecAuthFailed || self.keychainStatus==errSecInteractionNotAllowed;
+#else
+    return NO;
+#endif
+}
+- (BOOL)writeVault:(NSDictionary *)vault {
+    NSData *data=[NSJSONSerialization dataWithJSONObject:vault options:0 error:NULL]; if (!data) return NO;
+    NSMutableDictionary *q=[self keychainQuery]; NSDictionary *attributes=@{(__bridge id)kSecValueData:data,(__bridge id)kSecAttrAccessible:(__bridge id)kSecAttrAccessibleWhenUnlockedThisDeviceOnly};
+    OSStatus status=SecItemUpdate((__bridge CFDictionaryRef)q,(__bridge CFDictionaryRef)attributes);
+    if (status==errSecItemNotFound) { [q addEntriesFromDictionary:attributes]; status=SecItemAdd((__bridge CFDictionaryRef)q,NULL); if (status==errSecDuplicateItem) status=SecItemUpdate((__bridge CFDictionaryRef)[self keychainQuery],(__bridge CFDictionaryRef)attributes); }
+    self.keychainStatus=status;
+    if (status==errSecSuccess) { if ([[NSFileManager defaultManager] fileExistsAtPath:[self sessionFile]] && ![[NSFileManager defaultManager] removeItemAtPath:[self sessionFile] error:NULL]) return NO; self.protectedSessionStore=NO; return YES; }
+#if TARGET_OS_IPHONE
+    if ([self canUseProtectedSessionStore]) {
+        NSString *file=[self sessionFile],*directory=[file stringByDeletingLastPathComponent];
+        NSDictionary *dirAttributes=@{NSFileProtectionKey:NSFileProtectionComplete,NSFilePosixPermissions:@0700};
+        if (![[NSFileManager defaultManager] createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:dirAttributes error:NULL]) return NO;
+        if (![data writeToFile:file options:NSDataWritingAtomic|NSDataWritingFileProtectionComplete error:NULL]) return NO;
+        if (![[NSFileManager defaultManager] setAttributes:@{NSFileProtectionKey:NSFileProtectionComplete,NSFilePosixPermissions:@0600} ofItemAtPath:file error:NULL]) { [[NSFileManager defaultManager] removeItemAtPath:file error:NULL]; return NO; }
+        NSURL *url=[NSURL fileURLWithPath:directory]; if (![url setResourceValue:@YES forKey:NSURLIsExcludedFromBackupKey error:NULL]) { [[NSFileManager defaultManager] removeItemAtPath:file error:NULL]; return NO; }
+        self.protectedSessionStore=YES; return YES;
+    }
+#endif
+    return NO;
+}
+- (BOOL)save {
+    if (!self.server.length || !self.token.length || self.userID.longLongValue<=0) { self.keychainStatus=errSecParam; return NO; }
+    NSDictionary *old=[self readVault];
+    // Never overwrite an existing protected vault that could not be read.
+    if (!old && [[NSFileManager defaultManager] fileExistsAtPath:[self sessionFile]]) return NO;
+    if (!old && ![self canUseProtectedSessionStore]) return NO;
+    NSMutableDictionary *entry=[@{@"server":self.server,@"site":self.siteServer ?: self.server,@"token":self.token,@"id":self.userID,@"name":self.accountName ?: @""} mutableCopy];
+    NSMutableArray *accounts=[NSMutableArray array];
+    for (NSDictionary *account in [self accountsInVault:old]) if (!([OVKString(account[@"server"]) isEqual:self.server] && [OVKString(account[@"id"]) isEqual:OVKString(self.userID)])) [accounts addObject:account];
+    [accounts addObject:[entry copy]]; entry[@"accounts"]=accounts; return [self writeVault:entry];
+}
+- (NSArray *)savedAccounts {
+    NSMutableArray *metadata=[NSMutableArray array]; for (NSDictionary *entry in [self accountsInVault:[self readVault]]) [metadata addObject:@{@"server":entry[@"server"],@"id":entry[@"id"],@"name":OVKString(entry[@"name"])}]; return metadata;
+}
+- (BOOL)activateEntry:(NSDictionary *)entry {
+    NSString *server=[OVKAPI validatedServer:OVKString(entry[@"server"])]; if (!server || !OVKString(entry[@"token"]).length || [entry[@"id"] longLongValue]<=0) return NO;
+    self.server=server; self.siteServer=[OVKAPI validatedServer:OVKString(entry[@"site"])] ?: ([server isEqualToString:@"https://api.openvk.org"] ? @"https://openvk.org" : server); self.token=entry[@"token"]; self.userID=entry[@"id"]; self.accountName=OVKString(entry[@"name"]); self.demo=NO; return YES;
+}
+- (BOOL)switchToAccount:(NSDictionary *)account {
+    NSDictionary *vault=[self readVault];
+    for (NSDictionary *entry in [self accountsInVault:vault]) if ([OVKString(entry[@"server"]) isEqual:OVKString(account[@"server"])] && [OVKString(entry[@"id"]) isEqual:OVKString(account[@"id"])]) {
+        NSMutableDictionary *next=[entry mutableCopy]; next[@"accounts"]=[self accountsInVault:vault]; if (![self writeVault:next]) return NO;
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"OVKSessionChanged" object:nil]; [self activateEntry:entry]; [[NSNotificationCenter defaultCenter] postNotificationName:@"OVKAccountChanged" object:nil]; return YES;
+    } return NO;
+}
+- (void)beginAddingAccount { [[NSNotificationCenter defaultCenter] postNotificationName:@"OVKSessionChanged" object:nil]; self.token=nil; self.userID=nil; self.accountName=nil; self.demo=NO; [[NSNotificationCenter defaultCenter] postNotificationName:@"OVKLogout" object:nil]; }
+- (NSString *)keychainErrorDescription {
+    NSString *reason=@"Система не разрешила сохранить сеанс.";
+    if (self.keychainStatus==-34018) reason=@"В подписи приложения отсутствуют или не совпадают права Keychain. Нужна корректная повторная подпись IPA.";
+    else if (self.keychainStatus==errSecInteractionNotAllowed) reason=@"Keychain запретил доступ к сеансу. Если устройство заблокировано, разблокируйте его и повторите вход. На разблокированном устройстве также не удалось записать резервное защищённое хранилище.";
+    else if (self.keychainStatus==errSecNotAvailable) reason=@"Системная служба Keychain недоступна.";
+    else if (self.keychainStatus==errSecAuthFailed) reason=@"Система отклонила доступ приложения к Keychain.";
+    return [NSString stringWithFormat:@"%@\nКод Keychain: %ld.\nВход работает до завершения приложения; после перезапуска потребуется войти снова.",reason,(long)self.keychainStatus];
+}
+- (BOOL)restore { return [self activateEntry:[self readVault]]; }
 - (void)logout {
     NSURL *serverURL = [NSURL URLWithString:self.server];
     NSString *host = [serverURL host];
@@ -196,7 +272,16 @@ static NSError *OVKError(NSInteger code, NSString *message) {
         NSString *domain = [cookie.domain hasPrefix:@"."] ? [cookie.domain substringFromIndex:1] : cookie.domain;
         if ([host isEqualToString:domain] || [host hasSuffix:[@"." stringByAppendingString:domain]] || [siteHost isEqualToString:domain] || [siteHost hasSuffix:[@"." stringByAppendingString:domain]]) [[NSHTTPCookieStorage sharedHTTPCookieStorage] deleteCookie:cookie];
     }
-    SecItemDelete((__bridge CFDictionaryRef)[self keychainQuery]);
+    NSDictionary *vault=[self readVault]; if (!vault) return; NSMutableArray *remaining=[NSMutableArray array];
+    for (NSDictionary *entry in [self accountsInVault:vault]) if (!([OVKString(entry[@"server"]) isEqual:self.server] && [OVKString(entry[@"id"]) isEqual:OVKString(self.userID)])) [remaining addObject:entry];
+    if (remaining.count) { NSMutableDictionary *next=[remaining[0] mutableCopy]; next[@"accounts"]=remaining; if (![self writeVault:next]) return; }
+    else {
+        OSStatus status=SecItemDelete((__bridge CFDictionaryRef)[self keychainQuery]);
+        if (status!=errSecSuccess && status!=errSecItemNotFound) {
+            self.keychainStatus=status; if (!self.protectedSessionStore || ![self writeVault:@{}]) return;
+            // An empty protected vault prevents an inaccessible old Keychain token from reappearing.
+        } else if ([[NSFileManager defaultManager] fileExistsAtPath:[self sessionFile]] && ![[NSFileManager defaultManager] removeItemAtPath:[self sessionFile] error:NULL]) return;
+    }
     self.token = nil; self.userID = nil; self.demo = NO;
     [[NSNotificationCenter defaultCenter] postNotificationName:@"OVKLogout" object:nil];
 }
@@ -212,8 +297,18 @@ static NSError *OVKError(NSInteger code, NSString *message) {
         }
         if ([method isEqualToString:@"wall.get"]) {
             NSMutableArray *posts = [NSMutableArray array];
-            for (NSDictionary *post in OVKArray(fixtures[@"demo.posts"])) if ([OVKString(post[@"owner_id"]) isEqualToString:OVKString(parameters[@"owner_id"])]) [posts addObject:post];
+            for (NSDictionary *post in OVKArray(fixtures[@"demo.posts"])) if (![OVKString(parameters[@"filter"]) isEqualToString:@"archived"]) if ([OVKString(post[@"owner_id"]) isEqualToString:OVKString(parameters[@"owner_id"])]) { if ([OVKString(parameters[@"filter"]) isEqualToString:@"owner"] && ![OVKString(post[@"from_id"]) isEqualToString:OVKString(post[@"owner_id"])]) continue; [posts addObject:post]; }
             response = @{@"count":@(posts.count),@"items":posts,@"profiles":fixtures[@"demo.users"]};
+        }
+        if ([method isEqualToString:@"wall.getComments"]) {
+            NSMutableArray *comments=[NSMutableArray array];
+            for (NSDictionary *comment in OVKArray(OVKDictionary(fixtures[@"wall.getComments"])[@"items"])) if ([OVKString(comment[@"owner_id"]) isEqualToString:OVKString(parameters[@"owner_id"])] && [OVKString(comment[@"post_id"]) isEqualToString:OVKString(parameters[@"post_id"])]) [comments addObject:comment];
+            response=@{@"count":@(comments.count),@"items":comments,@"can_post":@1,@"profiles":fixtures[@"demo.users"] ?: @[],@"groups":@[]};
+        }
+        if ([method isEqualToString:@"wall.getById"]) {
+            NSMutableArray *posts=[NSMutableArray array];
+            for (NSDictionary *post in OVKArray(fixtures[@"demo.posts"])) { NSString *key=[NSString stringWithFormat:@"%@_%@",OVKString(post[@"owner_id"]),OVKString(post[@"id"])]; if ([OVKString(parameters[@"posts"]) isEqualToString:key]) [posts addObject:post]; }
+            response=@{@"items":posts,@"profiles":fixtures[@"demo.users"] ?: @[]};
         }
         dispatch_async(dispatch_get_main_queue(), ^{ completion(response,response ? nil : OVKError(-10,@"В деморежиме отправка отключена")); }); return;
     }

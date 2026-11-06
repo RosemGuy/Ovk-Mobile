@@ -1,0 +1,797 @@
+{
+  "ipa_sha256": "358ced9bbb1d052c5f467ded54b958d55575780fe9c21c4aeb52cd6d814c1261",
+  "files": {
+    "Navigation.png": {
+      "source": "Payload/vkclient.app/blue_header.png",
+      "source_sha256": "aad6fe5fe57fa8bad92c7211fbcb2ff53b18f0acf371e0c655e01d668234a39f",
+      "sha256": "ddf88e7dc024d33f7036516a94f466aaa79b5f51cfb1e5c6eba87ae45430e5d4",
+      "size": [
+        320,
+        44
+      ]
+    },
+    "Navigation@2x.png": {
+      "source": "Payload/vkclient.app/blue_header@2x.png",
+      "source_sha256": "6e72887430f94b809df945c639734532acee3eed6e580244e9d8756c222c8140",
+      "sha256": "7d79ae48fce20c38040bbc0dc16f4d61a0c98be7f3a18c5d6d1ca66bd4d685c7",
+      "size": [
+        640,
+        88
+      ]
+    },
+    "NavButton.png": {
+      "source": "Payload/vkclient.app/blue_btn_nav.png",
+      "source_sha256": "fce6dd52dbb8ea2798d65b06570c1d00f2e715e25c69c35d260fcb5ab4072fdf",
+      "sha256": "9f5b81cfdebdd63a0edff771479c95ef1be29cbe0ffd69fae9341449137ea702",
+      "size": [
+        17,
+        30
+      ]
+    },
+    "NavButton@2x.png": {
+      "source": "Payload/vkclient.app/blue_btn_nav@2x.png",
+      "source_sha256": "558750cb6d5f5ce1df6f142f89d95a55d2d436003d671eb755e631a67ac3d4ad",
+      "sha256": "51c8a63d5b1547253a79da2b2f1714233fe08d304e0f18084bb728ddccfbdde0",
+      "size": [
+        34,
+        60
+      ]
+    },
+    "NavButtonPressed.png": {
+      "source": "Payload/vkclient.app/blue_btn_nav_hl.png",
+      "source_sha256": "ce6b5e11e60f3a985e2483443ae9f7380da85427c069ac5026b42674148ce0f0",
+      "sha256": "5181166bf0507732ec42f4c24337b54c733698c384d042586bd1f16cb975a88d",
+      "size": [
+        17,
+        30
+      ]
+    },
+    "NavButtonPressed@2x.png": {
+      "source": "Payload/vkclient.app/blue_btn_nav_hl@2x.png",
+      "source_sha256": "dd26a5408b455a034fdaf787d3f104d6b83f3f9da5a41e7f9acb728f4094fb7f",
+      "sha256": "928bc1425008702a17c9303a4486ab9b13054f9895e940c71d2e16928bd6a6f4",
+      "size": [
+        34,
+        60
+      ]
+    },
+    "BackButton.png": {
+      "source": "Payload/vkclient.app/blue_back_btn_nav.png",
+      "source_sha256": "9f961aacb5ef3e1c9dc6ba6ec245991cd4df5982be93aeaec9deba07e09af961",
+      "sha256": "780b0833623afe0101ab18448f620afccae5cb9c5f1b222170502df16bbae168",
+      "size": [
+        23,
+        30
+      ]
+    },
+    "BackButton@2x.png": {
+      "source": "Payload/vkclient.app/blue_back_btn_nav@2x.png",
+      "source_sha256": "7cb2a2b6d16699b83956672fa04ad5862091bbd3cce63bee7a18e6c38a2295cf",
+      "sha256": "507f4101c924f746f9cbbe7b000601ae95d8e0e55a8e2c89e2386c647ff9d534",
+      "size": [
+        46,
+        60
+      ]
+    },
+    "BackButtonPressed.png": {
+      "source": "Payload/vkclient.app/blue_back_btn_nav_hl.png",
+      "source_sha256": "8f7b07e89ade4aee50db7667dc2c7a918b7fb26994ac9ef35093dbae51193034",
+      "sha256": "b69a51dc0d7b3f691156bef4b01ff81c33c8ae0d967f7461c9446dc88e865753",
+      "size": [
+        23,
+        30
+      ]
+    },
+    "BackButtonPressed@2x.png": {
+      "source": "Payload/vkclient.app/blue_back_btn_nav_hl@2x.png",
+      "source_sha256": "dc8a829c281d55210da7503a499cbaa34c4108f6c24cfcb7eed7baa390916275",
+      "sha256": "069f08355ebad59899e6c0843e58088be08fbcd7da962dedddc1571d61ceff16",
+      "size": [
+        46,
+        60
+      ]
+    },
+    "MusicNavigation.png": {
+      "source": "Payload/vkclient.app/black_header.png",
+      "source_sha256": "6f16da576d5a2260870d4c65bd2a1182f70c6a007ae08bcb1e61364e134b65e7",
+      "sha256": "13ad316ce319c2c446e66177e3dd11c7a4e00872d52ae42bb413f41b351a2b54",
+      "size": [
+        320,
+        44
+      ]
+    },
+    "MusicNavigation@2x.png": {
+      "source": "Payload/vkclient.app/black_header@2x.png",
+      "source_sha256": "bb6e9272e91878b0f1a8c5337f9f9910004999a92b95cc45b6520abbe0569abc",
+      "sha256": "bf99b8947dd6db68dd724ba3f3e0400fbfd411974de821a3f6741af8bf226271",
+      "size": [
+        640,
+        88
+      ]
+    },
+    "MusicButton.png": {
+      "source": "Payload/vkclient.app/black_btn_nav.png",
+      "source_sha256": "de2aecc244f1330d8086c3eb094b6d92a15a88a41d77e3d9880326db57df5ccc",
+      "sha256": "1bab95e354bb31aac576e3e9cc5bb2c4374f584716191e36f7d0932b88790840",
+      "size": [
+        17,
+        30
+      ]
+    },
+    "MusicButton@2x.png": {
+      "source": "Payload/vkclient.app/black_btn_nav@2x.png",
+      "source_sha256": "37bb6957fd149cb9954f8600ec86f769366ee42da1209f86147958566841fb3b",
+      "sha256": "4511e49a1f50c0e8d9813c9d6fb62d66720e7f16b986d434d0cb6026e8b7228f",
+      "size": [
+        34,
+        60
+      ]
+    },
+    "News.png": {
+      "source": "Payload/vkclient.app/left_news.png",
+      "source_sha256": "cf0d42b6735a850ef3ef47f7030923fef68fddecf82689dfe02d004e10c2d58d",
+      "sha256": "9257c4fae9999104f7788c0ac68291833c504694798b5b57bea2dfed6f14e007",
+      "size": [
+        31,
+        31
+      ]
+    },
+    "News@2x.png": {
+      "source": "Payload/vkclient.app/left_news@2x.png",
+      "source_sha256": "087ec561eb3cb2d028846ab85327b333b76839abcdb7de563ab9d746de3d8dc4",
+      "sha256": "c9b446a3214acf9027b816bd915ef5214de31c8bde74e793667b9f6656e0e603",
+      "size": [
+        62,
+        62
+      ]
+    },
+    "Friends.png": {
+      "source": "Payload/vkclient.app/left_friends.png",
+      "source_sha256": "70dea21c2209c77e697fd7dbd69490ec6c492ea1b43864cc1ee82a4227f06e78",
+      "sha256": "0417eb656ecf05b3c4dd52328ed8cce1c62a105db344cb42bb740835c64d0752",
+      "size": [
+        31,
+        31
+      ]
+    },
+    "Friends@2x.png": {
+      "source": "Payload/vkclient.app/left_friends@2x.png",
+      "source_sha256": "32b9d9b4a0a636a7216c13cd5143997d1aa8bdd27157d7ba1912647a3658b6bc",
+      "sha256": "db4a00b8f477b4eb850ec97a37555a6c8f7b4c3ad7dbe53fa8e9710d7b905509",
+      "size": [
+        62,
+        62
+      ]
+    },
+    "Messages.png": {
+      "source": "Payload/vkclient.app/left_messages.png",
+      "source_sha256": "64ba4448792c980cff5144083e2245f4d0451e9a165b2e29b8dc9702640fee68",
+      "sha256": "fb42907e1a973cd59f5030b5f7635f0a746c00487f11f9909c431a77ee0f3493",
+      "size": [
+        31,
+        31
+      ]
+    },
+    "Messages@2x.png": {
+      "source": "Payload/vkclient.app/left_messages@2x.png",
+      "source_sha256": "670af979c4ce79ffe3fdff3ff7194c052d1ad3d124f29ef9a2e7102dc4013ce2",
+      "sha256": "3991e80b0794ca5a47a7ccdbb5080bddaed3a473b18c1c67902f71c8b584c786",
+      "size": [
+        62,
+        62
+      ]
+    },
+    "Settings.png": {
+      "source": "Payload/vkclient.app/left_settings.png",
+      "source_sha256": "7106bae5f2684b50954c6eea71c031c0a225a9dc4bc40a313186d746faf63290",
+      "sha256": "3c4786c278d52e9622945a3c226b137dd4687bbb825594c23a23cbfe7d5869f7",
+      "size": [
+        31,
+        31
+      ]
+    },
+    "Settings@2x.png": {
+      "source": "Payload/vkclient.app/left_settings@2x.png",
+      "source_sha256": "68b105f0d14b2cd66c9e4ba272ad464d628b3d2302f3a897c1e06868e6f01d00",
+      "sha256": "0c79e15c54c47fb749cf83616798f6e76824284a1ab6f69d3808fb45be86d65d",
+      "size": [
+        62,
+        62
+      ]
+    },
+    "PhotoMedia.png": {
+      "source": "Payload/vkclient.app/left_photos.png",
+      "source_sha256": "de7c3b358435344ea8de4fa6740473ddf4311da8bb1274e74cf861724a96c910",
+      "sha256": "9d85d187249b8333c9add21a295574613f98d62f0942f741cbe96fb18d7b17d9",
+      "size": [
+        31,
+        31
+      ]
+    },
+    "PhotoMedia@2x.png": {
+      "source": "Payload/vkclient.app/left_photos@2x.png",
+      "source_sha256": "246e007fbe1e8411e86304d6541bdad3a9cc9d578d50f65bddd3d246fea6a05f",
+      "sha256": "af51461199de2cda8b806d5d6f3c7222652072ab63861cb3a2e4206521d053b1",
+      "size": [
+        62,
+        62
+      ]
+    },
+    "AudioMedia.png": {
+      "source": "Payload/vkclient.app/left_audio.png",
+      "source_sha256": "e27f0e1803723b40c7a27f583e03953704702f04c6c70f645442fe12c9fc05c1",
+      "sha256": "c863518d6c644769f9fb67a54695dfacc08e0da5f50be6ec73e94d36537c9c83",
+      "size": [
+        31,
+        31
+      ]
+    },
+    "AudioMedia@2x.png": {
+      "source": "Payload/vkclient.app/left_audio@2x.png",
+      "source_sha256": "48646eab0fa73637855bca105581c8c35f945b9248a0380524b186c26fd273a7",
+      "sha256": "20d20d0fa6e1a889a5f4edc18482519d9a92e3e5a5b86038d012bb6d48cb86cd",
+      "size": [
+        62,
+        62
+      ]
+    },
+    "VideoMedia.png": {
+      "source": "Payload/vkclient.app/left_videos.png",
+      "source_sha256": "a1bc27b5a239671f305f7f744d7dc8de601abd99a2db96286d0d822e2dc2cda0",
+      "sha256": "7b2b6106c8af156b41773729c605fb5a4d5c414b39b9e9eeea5b7b1649bf92b1",
+      "size": [
+        31,
+        31
+      ]
+    },
+    "VideoMedia@2x.png": {
+      "source": "Payload/vkclient.app/left_videos@2x.png",
+      "source_sha256": "b083e664ec462e185856ba917a15ff2af3869416ab8cd1ad5e58790f5255124e",
+      "sha256": "081f1c4a710e85a12112f4ea1c82110278fca82f94c370303a365f39cc731cf5",
+      "size": [
+        62,
+        62
+      ]
+    },
+    "Profile.png": {
+      "source": "Payload/vkclient.app/left_wall.png",
+      "source_sha256": "5b5905d4bf7f10c9ae0a8b63050f7d447b8deef8200e790c893ace3cf9027d5d",
+      "sha256": "fc1dd90572a7feb4f15da13995efe7dce0dca7db7617a52c9e618d5d48b72443",
+      "size": [
+        31,
+        31
+      ]
+    },
+    "Profile@2x.png": {
+      "source": "Payload/vkclient.app/left_wall@2x.png",
+      "source_sha256": "615548f6bd0d6dfee1625888b8f978a0bc6a0493bbddf8e7bf3ebfd6b8a2ab58",
+      "sha256": "3eeb2ad84e2080d22c6c190ade7fd7a09afa357f22bf2c9c73832bc0bca24bf2",
+      "size": [
+        62,
+        62
+      ]
+    },
+    "Menu.png": {
+      "source": "Payload/vkclient.app/menu_icon.png",
+      "source_sha256": "436d68dbc357aaaa9e328d39c23ef2caff191cb826a2921d7fc64e5ee2d99ff1",
+      "sha256": "95ae60a8285cba3c2b16a3668a99b8b662ecbf337809dbfcb8b8bb7b12f652e2",
+      "size": [
+        19,
+        16
+      ]
+    },
+    "Menu@2x.png": {
+      "source": "Payload/vkclient.app/menu_icon@2x.png",
+      "source_sha256": "17fe0437c9ea7d73118a9098cd9c6764613b6991bdcce82c2bc0d3ac15ee33b0",
+      "sha256": "28585647ad81c149d313a1fe58b98b1b0d15320a4f36204ab235c14646189082",
+      "size": [
+        38,
+        32
+      ]
+    },
+    "MenuRow.png": {
+      "source": "Payload/vkclient.app/left_cell.png",
+      "source_sha256": "8a113b74cf98fe340f6b2a4ce6c9224e5cfd50395a6c79ef7baad75b02459096",
+      "sha256": "420893fe9efc31a08411a483846c9f4600b394888c85954612588cf2b0002a5f",
+      "size": [
+        20,
+        44
+      ]
+    },
+    "MenuRow@2x.png": {
+      "source": "Payload/vkclient.app/left_cell@2x.png",
+      "source_sha256": "3a80842159c6f1d9e4d16348b31bb80b4b34e78d254bf7a4c71efc003499dc58",
+      "sha256": "42365a87746c5b1b741a0cb256ed3cf640b1bd66d70feb7f0fb8887bc66ca7a7",
+      "size": [
+        40,
+        88
+      ]
+    },
+    "MenuSelected.png": {
+      "source": "Payload/vkclient.app/menu_cell_hl.png",
+      "source_sha256": "77b2c57ac771ca583164e05a14d621a10a9be0258d7fe9165320f111dbd61312",
+      "sha256": "19e0cdac4b5a7e5096987de113160630575e1d161951a5fd6be2e46b64b7ecbd",
+      "size": [
+        20,
+        44
+      ]
+    },
+    "MenuSelected@2x.png": {
+      "source": "Payload/vkclient.app/menu_cell_hl@2x.png",
+      "source_sha256": "73d4b52d24f662a0bb831005107c79f83abe7093a20d8140a02eba737ef0ff0d",
+      "sha256": "c8e8e5c2a993d9eae117ae55ac3e761529f2262602f2118d0ace1132717b90e7",
+      "size": [
+        40,
+        88
+      ]
+    },
+    "LoginButton.png": {
+      "source": "Payload/vkclient.app/login_btn.png",
+      "source_sha256": "85176894737782701f495a2cc3b256a975cd501d364b9ed22fedc5a8a4785f62",
+      "sha256": "1146d44c41eb10c8332d1a00e855db9d94499aae66e5f17dfe8888c797453abc",
+      "size": [
+        288,
+        46
+      ]
+    },
+    "LoginButton@2x.png": {
+      "source": "Payload/vkclient.app/login_btn@2x.png",
+      "source_sha256": "423375a776c048809196fbd38cf47973d6381f03f36a83b3d40f36f789d13085",
+      "sha256": "5aa746f9317e5b2a76f11879fb69bcb916923d3dd068fb67ec52798783aaf70a",
+      "size": [
+        576,
+        92
+      ]
+    },
+    "LoginButtonPressed.png": {
+      "source": "Payload/vkclient.app/login_btn_hl.png",
+      "source_sha256": "ac877aa4213f5b871507ed4edddc1aa2558247ccfef6dbfdacf6185955277d32",
+      "sha256": "180ad492bc6fce15f842a10a5a3bddae788acf7d8a5b7c2671eebfeae9ff7616",
+      "size": [
+        288,
+        46
+      ]
+    },
+    "LoginButtonPressed@2x.png": {
+      "source": "Payload/vkclient.app/login_btn_hl@2x.png",
+      "source_sha256": "1a6efa50c375ff12ed58ef07b7f4205ce77cf694348bd06ed98292407980cc9f",
+      "sha256": "49366727181251a8af185393a7734a002c4316d8364db7e6e76c68bf46627138",
+      "size": [
+        576,
+        92
+      ]
+    },
+    "ProfileBlueButton.png": {
+      "source": "Payload/vkclient.app/wall_blue_btn.png",
+      "source_sha256": "ad50b513fff1bb392cc1ab03ba909e5d36c10f508647f08bab866199719681d1",
+      "sha256": "82143d992b4c3ef7509531dc1db23c16e792e64e05c8c432965063a7a6751dc8",
+      "size": [
+        16,
+        33
+      ]
+    },
+    "ProfileBlueButton@2x.png": {
+      "source": "Payload/vkclient.app/wall_blue_btn@2x.png",
+      "source_sha256": "06161b91cc327cae1c5ba62193596e311b1a76f9d09a400ebd11dd6269f23fd4",
+      "sha256": "a45c7be23379b70add85e7243bf0598c57c1f8431aee13c99632118eb1b8410a",
+      "size": [
+        32,
+        66
+      ]
+    },
+    "ProfileBlueButtonPressed.png": {
+      "source": "Payload/vkclient.app/wall_blue_btn_hl.png",
+      "source_sha256": "54f1b0bc32239cbd05ca59d79833407cae920f494d211e72cba33a6f605679ad",
+      "sha256": "ebf3e960274f97a78fee2a2337f183b9c26359d53c96fe0a2f590e893d24e2a6",
+      "size": [
+        16,
+        33
+      ]
+    },
+    "ProfileBlueButtonPressed@2x.png": {
+      "source": "Payload/vkclient.app/wall_blue_btn_hl@2x.png",
+      "source_sha256": "b6ba534e3179fb1504338d01cd179a865501eead1bd6ede5377e44cfbff52afd",
+      "sha256": "53908391cd40c3dcd31b44e8750c8c780b09c01246887a0158f74a3cdc454582",
+      "size": [
+        32,
+        66
+      ]
+    },
+    "FooterButton.png": {
+      "source": "Payload/vkclient.app/wall_gray_btn.png",
+      "source_sha256": "aac6e3c549eff5ca02e7140d2f406280f2c4d25e039ca009afae4a2e542880fe",
+      "sha256": "86c81f082d093cc1ef1d1b733786f62f833b52f86996df31d96ea11e04c0fd46",
+      "size": [
+        16,
+        33
+      ]
+    },
+    "FooterButton@2x.png": {
+      "source": "Payload/vkclient.app/wall_gray_btn@2x.png",
+      "source_sha256": "ee97f8befd7fc169f300ebe4122630d0e7d0d001df23c7059bd115f81f34852d",
+      "sha256": "45ec678a9a4f4546222b2b983be09ea211bc2fe57c34051433897e5d5a77e09f",
+      "size": [
+        32,
+        66
+      ]
+    },
+    "FooterButtonPressed.png": {
+      "source": "Payload/vkclient.app/wall_gray_btn_hl.png",
+      "source_sha256": "69a1e6fcaa1d6a8c5f0af9f65b67868174fd6a5a59070d91c0b15f38c822d645",
+      "sha256": "38fa291bf7cc8f0c2f76a3da8f18a5a5f779cb1da0022548843fd2313a9c77b2",
+      "size": [
+        16,
+        33
+      ]
+    },
+    "FooterButtonPressed@2x.png": {
+      "source": "Payload/vkclient.app/wall_gray_btn_hl@2x.png",
+      "source_sha256": "96234f2a309f1df0f4389b1d1215cda058efd91d3e699d031fd9fd42495a90fd",
+      "sha256": "6f1b8d5e7645336b30452c8fd142c7f80ff42ad27100a43ca026894bcdeb2c21",
+      "size": [
+        32,
+        66
+      ]
+    },
+    "ProfileCounter.png": {
+      "source": "Payload/vkclient.app/wall_block.png",
+      "source_sha256": "c0de93e14a3255b53e3b3eb165c0126b6047b0044e459df70906fb427941a8a8",
+      "sha256": "b0d59333838a7e7132e6a0b2e223c2be686939bf346ece2fd8e26ea49b9db884",
+      "size": [
+        97,
+        46
+      ]
+    },
+    "ProfileCounter@2x.png": {
+      "source": "Payload/vkclient.app/wall_block@2x.png",
+      "source_sha256": "e18e155ef492476243db43663b1e7430eb4bdcd7a41ebb7c8c9175e4af7349ea",
+      "sha256": "caaa4bb6c3e164707d9f1beb6711b1893ee74eaf06fcd79bbcecb081e693bac5",
+      "size": [
+        194,
+        92
+      ]
+    },
+    "ProfileCounterPressed.png": {
+      "source": "Payload/vkclient.app/wall_block_hl.png",
+      "source_sha256": "1de60cdf041b632627a957632bfe308a7a0e7f9325a0c90cd703bec18a75361d",
+      "sha256": "08d7e37b640910da4dbd32cc8891fa9b40f147153daa14e6cdaaf91f3de8c88b",
+      "size": [
+        97,
+        46
+      ]
+    },
+    "ProfileCounterPressed@2x.png": {
+      "source": "Payload/vkclient.app/wall_block_hl@2x.png",
+      "source_sha256": "f569d21aa2780269fd582affd9ddde913eccba12314645e05f24bc33e6eb6574",
+      "sha256": "a62403391c7b8920ecd67d462ffd498e678fb5ffa51bb36249701cb7d0053bca",
+      "size": [
+        194,
+        92
+      ]
+    },
+    "BubbleIncoming.png": {
+      "source": "Payload/vkclient.app/Grey_Bubble.png",
+      "source_sha256": "0ee7d058c7a16fe66fb102b1e59e000429458434519555d675ba039300de0972",
+      "sha256": "4c58d1553fb7a4943d3648c35397b5a737e6fd1c6e6eabf9b0a8b04197d06b93",
+      "size": [
+        40,
+        31
+      ]
+    },
+    "BubbleIncoming@2x.png": {
+      "source": "Payload/vkclient.app/Grey_Bubble@2x.png",
+      "source_sha256": "f3f004f176cd0b044680e67c506df2a0db6caa19dffe9b47228091ff4bf6966e",
+      "sha256": "b9f627ed3f1f21347b35a816ce9bf7adbb714e068442a118d186d822238d1357",
+      "size": [
+        80,
+        62
+      ]
+    },
+    "BubbleOutgoing.png": {
+      "source": "Payload/vkclient.app/Blue_Bubble.png",
+      "source_sha256": "e17245f909a8eb9c7ec855649be5a6cf521d3c72fb3db29907139d2ffff3f7bf",
+      "sha256": "7ff184e6f379298290209d6f61660a817e8a0004a66c37a9464b9b0d52e2818d",
+      "size": [
+        40,
+        31
+      ]
+    },
+    "BubbleOutgoing@2x.png": {
+      "source": "Payload/vkclient.app/Blue_Bubble@2x.png",
+      "source_sha256": "b91dec2632ef9893f75e68f08fba1cf3c874ddcd61379d0fc0346c38bf7424e5",
+      "sha256": "949a4b1cf43b3746069f592f44620de00eac7523a2d67e7eec0496dc4f422430",
+      "size": [
+        80,
+        62
+      ]
+    },
+    "ComposeGlyph.png": {
+      "source": "Payload/vkclient.app/newpost_icon.png",
+      "source_sha256": "19a2c4c8570f43ac922cd3db14dd7a7b79c5f47aa14838e642a9d073401cad29",
+      "sha256": "04b0ce53b965dcbe650654cd34d9e51ccbd9db94d2827bab317a89d91cd92ead",
+      "size": [
+        29,
+        29
+      ]
+    },
+    "ComposeGlyph@2x.png": {
+      "source": "Payload/vkclient.app/newpost_icon@2x.png",
+      "source_sha256": "bd9b21a1684b94d449e960e8116f8695fb3b94486a7336a09a2ec5cf4791afc9",
+      "sha256": "827d65f7ce3c46fe6bfbfcbb423a2720f900f90d0d4f7e8761e1eb3f2f1a382f",
+      "size": [
+        58,
+        58
+      ]
+    },
+    "PlayTrack.png": {
+      "source": "Payload/vkclient.app/audioplayer_play.png",
+      "source_sha256": "b84ae898a6da9ff58dd521f6bc16c726fbc4df24cb03e91ef2e21cd45927719e",
+      "sha256": "f9acedbf1088ff679684add7c638801209fbfe47d40f8b5f272d6da9cb939fe3",
+      "size": [
+        35,
+        36
+      ]
+    },
+    "PlayTrack@2x.png": {
+      "source": "Payload/vkclient.app/audioplayer_play@2x.png",
+      "source_sha256": "5e495f347829e166afa21bfbad7e8d97347730dd50207637201159fc0775c7ff",
+      "sha256": "3d62c260e0ffae0e9606a88856fb31e43ca3973abe79385fa54fd3cb6c9fbd78",
+      "size": [
+        70,
+        72
+      ]
+    },
+    "PauseTrack.png": {
+      "source": "Payload/vkclient.app/audioplayer_pause.png",
+      "source_sha256": "dad8e2b017a4bdce7b102ef6249d774d176700f7d28019b239a0b12d41e6005b",
+      "sha256": "ec3c86598de13e495dd7a3d3589efe921979b384c7780028a046ba2b3e9b8a20",
+      "size": [
+        23,
+        33
+      ]
+    },
+    "PauseTrack@2x.png": {
+      "source": "Payload/vkclient.app/audioplayer_pause@2x.png",
+      "source_sha256": "feb1f230445285bb986d58f96746f6ec96dc1c601a73cddd80a065d439be2bbf",
+      "sha256": "288883f581dc58efa1374e3d0d2431f532153d3aa8e3501d8da029d2b33f0db1",
+      "size": [
+        46,
+        66
+      ]
+    },
+    "NextTrack.png": {
+      "source": "Payload/vkclient.app/audioplayer_next.png",
+      "source_sha256": "85b0452e7e9a3aa93fffdb7cbe0e58547f35b2165df6795bbd2c188db272e373",
+      "sha256": "4d0f1c6ae47f97e90baef9038a0fad27f9a683e37eca86c56f97a8bfe6784d51",
+      "size": [
+        28,
+        29
+      ]
+    },
+    "NextTrack@2x.png": {
+      "source": "Payload/vkclient.app/audioplayer_next@2x.png",
+      "source_sha256": "fc5b21580d09b27842426c5d3ce476ea920167a55cd7b9712fe4b31fe745feb6",
+      "sha256": "bf09eac78707ba45d732d5b54047bacf96952e6cd400e54a0a8045c035c4242f",
+      "size": [
+        56,
+        58
+      ]
+    },
+    "PreviousTrack.png": {
+      "source": "Payload/vkclient.app/audioplayer_previous.png",
+      "source_sha256": "f96a491d7fac6926c53d66e4b4d55aed408e56d34d05e2a93735ed7bedee3c34",
+      "sha256": "f9cc3b0421d6b13c015b9bfff433dd0830ce748c19b948fc2ed59c57dda114fd",
+      "size": [
+        28,
+        29
+      ]
+    },
+    "PreviousTrack@2x.png": {
+      "source": "Payload/vkclient.app/audioplayer_previous@2x.png",
+      "source_sha256": "80d96c5510fd6a507d771fe1274686e8c334d5bd8c4c951fd02767074ef75377",
+      "sha256": "b7f50b738ad028f83dea653baae586a9377e8aa8c8603042c4acea3703ffb37c",
+      "size": [
+        56,
+        58
+      ]
+    },
+    "MessageBar.png": {
+      "source": "Payload/vkclient.app/MessageEntryBackground.png",
+      "source_sha256": "5f6b4f8cd6c3c0bf446e32703202cde3660914abebc280a112543283811f206e",
+      "sha256": "5df8d9173a1466565a43327450e9055e473facd199461e51835eb641d70da53d",
+      "size": [
+        10,
+        41
+      ]
+    },
+    "MessageBar@2x.png": {
+      "source": "Payload/vkclient.app/MessageEntryBackground@2x.png",
+      "source_sha256": "8b5ad00322e02f6995f8ca2a3e0f4cfe1a8055eba89cf5a9a689c13f86ef385e",
+      "sha256": "2dfb3817c4643c88797f54642ce03903bb9e52840e6f438f88f61ee67829a507",
+      "size": [
+        20,
+        82
+      ]
+    },
+    "MessageField.png": {
+      "source": "Payload/vkclient.app/MessageEntryInputField.png",
+      "source_sha256": "ff30f212491e34f3f1392cee0ac78b29368e622e9184f90f449b9f06191157f1",
+      "sha256": "4e5acdb22c1e22905290d0a25b0a3aa5337c1e89c1aac2f579dee5a2192cf2bb",
+      "size": [
+        36,
+        41
+      ]
+    },
+    "MessageField@2x.png": {
+      "source": "Payload/vkclient.app/MessageEntryInputField@2x.png",
+      "source_sha256": "218aad916f77654cc4188e14f34e3aae9e2ff35249dd568b057e0f22f7c07210",
+      "sha256": "2800d20fe73e41d405e39906b70699c7c6f1c79c9facc9b729944788943e99bd",
+      "size": [
+        72,
+        82
+      ]
+    },
+    "SendButton.png": {
+      "source": "Payload/vkclient.app/send_button.png",
+      "source_sha256": "996baaef2a5ca3ebd51a203f1cde0e01d245bf040575cb41ce825d9762a3f345",
+      "sha256": "2bb2053bd3fd88109a0538431ec177d0ba1255b54b8ee293184bd40642a8d5a8",
+      "size": [
+        59,
+        29
+      ]
+    },
+    "SendButton@2x.png": {
+      "source": "Payload/vkclient.app/send_button@2x.png",
+      "source_sha256": "95d82752099bd6c9d6f591ff7cbe0749532f16859b674f7976481121aa33d69d",
+      "sha256": "5294da012e7e2f2e36c921ed0e4e053916d9a5bd716c8204694ab940e3f5f498",
+      "size": [
+        118,
+        58
+      ]
+    },
+    "SendButtonPressed.png": {
+      "source": "Payload/vkclient.app/send_button_hl.png",
+      "source_sha256": "de95c8e7aa000655c6cae36329048a6f7efd568d0bdb487c6851d23c3629d51d",
+      "sha256": "a944294cba21dfd6ecb74a08f5e45598586f03e93cf09347c5bc62652ca539b6",
+      "size": [
+        59,
+        29
+      ]
+    },
+    "SendButtonPressed@2x.png": {
+      "source": "Payload/vkclient.app/send_button_hl@2x.png",
+      "source_sha256": "b7522db1a8bf5e6cf532cda0881131a636cfdc7defdf4ca0a81963717602d435",
+      "sha256": "c48af5b0c9f39f428c80e71ab37defe5d4b3e87a9f7513270330036a512e03b4",
+      "size": [
+        118,
+        58
+      ]
+    },
+    "PostComment.png": {
+      "source": "Payload/vkclient.app/post_btn_comment.png",
+      "source_sha256": "e343d4f89b103ac491c60ac5f35951e288dbcd28ab0b8c1042998bdacefb56de",
+      "sha256": "a11607cc79fe4d0d26960bffac857b2af126c47d182829fd2561afaa815b4273",
+      "size": [
+        16,
+        16
+      ]
+    },
+    "PostComment@2x.png": {
+      "source": "Payload/vkclient.app/post_btn_comment@2x.png",
+      "source_sha256": "db5fe4228bb3c418362fe3722ad7ea25f0cd25f3e34e75313c67932a7fcd8047",
+      "sha256": "c1d2b03e11d91b77defe430924eabdcfe98b934e670014972e8bd5034deb90d2",
+      "size": [
+        32,
+        32
+      ]
+    },
+    "PostLike.png": {
+      "source": "Payload/vkclient.app/post_btn_like.png",
+      "source_sha256": "cde4d03fdc75782dadcbf3c2441c48256ef41afc341d2d7c4ee434ca33345494",
+      "sha256": "1a245f9ddfb555262829ae193217daf4755a9c075131b2859c0cc986eb85883c",
+      "size": [
+        16,
+        16
+      ]
+    },
+    "PostLike@2x.png": {
+      "source": "Payload/vkclient.app/post_btn_like@2x.png",
+      "source_sha256": "48786139071f4850e95d59db90622629f410efbeb67ab009d6c0709d00194c69",
+      "sha256": "b115b40f5cae8d9bc023fa116475c0bad2dfbe71271a307c1226b0aa84294f49",
+      "size": [
+        32,
+        32
+      ]
+    },
+    "PostHeader.png": {
+      "source": "Payload/vkclient.app/news_post_header.png",
+      "source_sha256": "9d5f82c3ccb879d2446b2505d7e4fa91185798102be4a5b404cdb13238821d72",
+      "sha256": "bce92c5467190549c0263d13cd57b8dc01f3ed8fcab3e98f261e9c45a236f0ec",
+      "size": [
+        4,
+        54
+      ]
+    },
+    "PostHeader@2x.png": {
+      "source": "Payload/vkclient.app/news_post_header@2x.png",
+      "source_sha256": "af9cd3b0a439333a27713d46e31c35be85e60f6f36f342843c4ada18dd3ab484",
+      "sha256": "05bfa5d22f8eec88943c4e9d46217e0bd8767958880459f810ee6c6029e00ec3",
+      "size": [
+        8,
+        108
+      ]
+    },
+    "PostButton.png": {
+      "source": "Payload/vkclient.app/post_detail_btn.png",
+      "source_sha256": "852685a66cb704b0cd6ff918b2d05a2e3322da6b4e5a8fab3c7c6c61812950e2",
+      "sha256": "061fd53da8828ba2a2a7914b79aaade870e76bbdb3dad15263410cbfe2496e82",
+      "size": [
+        15,
+        30
+      ]
+    },
+    "PostButton@2x.png": {
+      "source": "Payload/vkclient.app/post_detail_btn@2x.png",
+      "source_sha256": "ac8bf9eb516bc66e05797942ae2c99a43884b2347a192b9c3bf51824593a0a0f",
+      "sha256": "ec09d0191299ebf3afd66d10b74fbaf9b4173c03a9c670ac3358c0925b1fdb4d",
+      "size": [
+        30,
+        60
+      ]
+    },
+    "PostButtonPressed.png": {
+      "source": "Payload/vkclient.app/post_detail_btn_hl.png",
+      "source_sha256": "3e50358945ebc47292ab04ff8b155c51642e1b6a20161a2aab8c1e679079b402",
+      "sha256": "d02a95a42f813e955850cd27aec1ca55009f48721dafa7123e058555b5673cbb",
+      "size": [
+        15,
+        30
+      ]
+    },
+    "PostButtonPressed@2x.png": {
+      "source": "Payload/vkclient.app/post_detail_btn_hl@2x.png",
+      "source_sha256": "23ce203e7803307eb4919023a3651b325737bcc3c6c23767ea594787365982eb",
+      "sha256": "daa1bd07e5fff594dad3e3a09712366a3646d8a25645aaaa518be58a7b28b155",
+      "size": [
+        30,
+        60
+      ]
+    },
+    "ProfileTabs.png": {
+      "source": "Payload/vkclient.app/wall_posts_panel.png",
+      "source_sha256": "e62919ff95069d2b592e707f3ffef57bce824019a699c5afe27060868843d1c2",
+      "sha256": "00b63f2708a173a7a646b63cab01ff9e27f61b33ea403ef32aa12c8ad133bfa1",
+      "size": [
+        20,
+        38
+      ]
+    },
+    "ProfileTabs@2x.png": {
+      "source": "Payload/vkclient.app/wall_posts_panel@2x.png",
+      "source_sha256": "fdd7ade7a1d99e47dc0a91e4248cd5e336a9c46babde3540f61dc3ee15b71200",
+      "sha256": "eb4a39d4b841776d104b5584f2139918026358fd077541053080c86d866d34c4",
+      "size": [
+        40,
+        76
+      ]
+    },
+    "LoginField.png": {
+      "source": "Payload/vkclient.app/new_login_field.png",
+      "source_sha256": "1ad3b0657da12e48280ebd32785e95db40a2a2f04edf5177301e61bd7ca9e003",
+      "sha256": "792f1b5bff7c7dc1f3ba9d25e7216b14ff8ffe58976675a6ab9af70a743f6b11",
+      "size": [
+        30,
+        44
+      ]
+    },
+    "LoginField@2x.png": {
+      "source": "Payload/vkclient.app/new_login_field@2x.png",
+      "source_sha256": "44774edea4d029f83cdbf028284d8b39cdd3cdcdeebbca9e5e5a1503260ebc94",
+      "sha256": "69efc2aec806f7a42541c88006373937c4a135b5cf93d861cea1c30acd54a3f8",
+      "size": [
+        60,
+        88
+      ]
+    }
+  }
+}

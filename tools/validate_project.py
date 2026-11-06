@@ -45,8 +45,15 @@ for obj in objects.values():
     if obj.get('isa') in ['PBXSourcesBuildPhase','PBXResourcesBuildPhase']:
         paths = [refs[objects[reference]['fileRef']]['path'] for reference in obj['files']]
         (compiled if obj['isa'] == 'PBXSourcesBuildPhase' else resources).extend(paths)
-assert set(compiled) == {path.name for path in (root/'OpenVK').glob('*.m')}
+assert set(compiled) == {path.name for path in (root/'OpenVK').iterdir() if path.suffix in {'.m','.c'}}
 assert 'Demo.json' in resources and 'Info.plist' not in resources
+for resource in resources:
+    path = root/'OpenVK'/resource
+    assert not path.name.startswith('.'), ('Hidden file in app resources', resource)
+    assert path.suffix.lower() in {'.png','.json','.cer','.wav','.mp4'}, ('Unsupported app resource', resource)
+    if path.suffix.lower()=='.png':
+        assert path.read_bytes().startswith(bytes([137,80,78,71,13,10,26,10])), ('Not a PNG', resource)
+assert not any(ref.get('lastKnownFileType')=='image.png' and Path(ref['path']).suffix.lower()!='.png' for ref in refs.values())
 for obj in objects.values():
     if obj.get('isa') == 'XCBuildConfiguration': assert obj['buildSettings']['IPHONEOS_DEPLOYMENT_TARGET'] == '6.0'
 info = plistlib.loads((root/'OpenVK/Info.plist').read_bytes()); assert info['MinimumOSVersion'] == '6.0'

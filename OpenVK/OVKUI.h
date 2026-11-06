@@ -1,10 +1,13 @@
 #import <UIKit/UIKit.h>
+#import "OVKLanguage.h"
+#import "OVKTheme.h"
 UIColor *OVKBlue(void);
 void OVKAlert(NSString *title, NSString *message);
+void OVKConfigureEdges(UIViewController *controller);
 void OVKStyleNavigation(UINavigationController *navigation);
 @interface OVKLoginController : UIViewController
 @end
-@interface OVKListController : UITableViewController
+@interface OVKListController : UIViewController
 - (id)initWithMode:(NSString *)mode identifier:(NSNumber *)identifier title:(NSString *)title;
 @end
 @interface OVKAppDelegate : UIResponder <UIApplicationDelegate>
@@ -17,4 +20,14 @@ void OVKStyleNavigation(UINavigationController *navigation);
 @interface OVKInstancesController : UITableViewController
 - (id)initWithSelection:(void (^)(NSString *site, NSString *api))selection;
 + (void)rememberSite:(NSString *)site api:(NSString *)api;
+@end
+
+NSArray *OVKMenuOrder(void);
+NSString *OVKMenuTitle(NSString *mode);
+@interface OVKAccountsController : UITableViewController
+@end
+@interface OVKMenuOrderController : UITableViewController
+@end
+
+@interface OVKAboutController : UIViewController
 @end

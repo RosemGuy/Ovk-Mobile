@@ -17,7 +17,7 @@ int main(int argc,const char *argv[]) {
         [cancelled prepareURL:file completion:^(NSError *error) { Expect(error.code==NSURLErrorCancelled,"Cancelled preparation never becomes ready"); done=YES; }]; [cancelled stop];
         Wait(^BOOL { return done; },"Cancel callback");
         done=NO; OVKLocalAudio *audio=[[OVKLocalAudio alloc] init];
-        [audio prepareURL:file completion:^(NSError *error) { Expect(!error,"Prepare WAV"); Expect(audio.duration>1.9 && audio.duration<2.1,"Correct duration"); done=YES; }];
+        [audio prepareURL:file completion:^(NSError *error) { Expect(!error,"Prepare WAV"); Expect(audio.codecDescription.length>0 && [audio.codecDescription rangeOfString:@"lpcm"].location!=NSNotFound,"WAV codec is inspected"); Expect(audio.duration>1.9 && audio.duration<2.1,"Correct duration"); done=YES; }];
         Wait(^BOOL { return done; },"Prepare callback");
         done=NO; [audio playWithCompletion:^(NSError *error) { Expect(!error && audio.playing,"Play returns actual success"); done=YES; }];
         Wait(^BOOL { return done; },"Play callback");

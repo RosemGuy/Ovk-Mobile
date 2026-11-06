@@ -13,19 +13,29 @@ elif name=='xcrun':
  elif args[:2]==['lipo','-archs']:print('armv7 armv7s')
  else:sys.exit(1)
 elif name=='xcodebuild':
- if os.environ.get('FAKE_BUILD_FAIL'):print('error: test compile failure');sys.exit(65)
+ if os.environ.get('FAKE_BUILD_FAIL'):
+  print('OpenVK/OVKTest.m:42:9: error: test compile failure')
+  print('    invalid_expression;')
+  for i in range(100):print('CopyPNGFile resource-%d.png' % i)
+  print('** BUILD FAILED **');sys.exit(65)
  directory=next(x.split('=',1)[1] for x in args if x.startswith('CONFIGURATION_BUILD_DIR='))
  app=Path(directory)/'OpenVKClassic.app';app.mkdir(parents=True,exist_ok=True)
  (app/'OpenVKClassic').write_text('fake ARM app');(app/'Info.plist').write_text('fake plist')
  print('** BUILD SUCCEEDED **')
+elif name=='defaults':print('org.openvk.classic.ios6')
 elif name=='ditto':shutil.copytree(args[0],args[1])
 elif name=='codesign':
  assert Path(os.environ['CODESIGN_ALLOCATE']).exists()
+ if '--sign' in args:
+  import plistlib
+  ent=plistlib.loads(Path(args[args.index('--entitlements')+1]).read_bytes())
+  assert ent['application-identifier']=='org.openvk.classic.ios6'
+  assert ent['keychain-access-groups']==['org.openvk.classic.ios6']
  if os.environ.get('FAKE_SIGN_FAIL'):sys.exit(1)
 '''
 with tempfile.TemporaryDirectory(prefix='ovk-build-test-') as tmp:
     base=Path(tmp);bin=base/'bin';bin.mkdir();developer=base/'Xcode.app/Contents/Developer';(developer/'Platforms/iPhoneOS.platform').mkdir(parents=True)
-    for name in ['xcode-select','xcrun','xcodebuild','ditto','codesign','codesign_allocate']:
+    for name in ['xcode-select','xcrun','xcodebuild','ditto','codesign','codesign_allocate','defaults']:
         p=bin/name;p.write_text(mock);p.chmod(0o755)
     for case in ['success','compile-failure','sign-failure']:
         project=base/case;project.mkdir();shutil.copyfile(root/'BuildIPA.command',project/'BuildIPA.command')
@@ -41,5 +51,8 @@ with tempfile.TemporaryDirectory(prefix='ovk-build-test-') as tmp:
             assert result.returncode!=0 and not ipa.exists(),result.stdout+result.stderr
             report=(project/'Build-result.txt').read_text()
             assert ('device build' if case=='compile-failure' else 'ad-hoc signature') in report
+            if case=='compile-failure':
+                assert 'OVKTest.m:42:9: error: test compile failure' in report
+                assert 'invalid_expression;' in report
         print('PASS:',case)
 print('Fake-tool tests passed. Actual Xcode build and device signing remain untested.')

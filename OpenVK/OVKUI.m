@@ -89,6 +89,12 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     }
     return 0;
 }
+// The artwork remains 29pt tall; the control has a full 44pt touch target.
+@interface OVKMessageSendButton : UIButton
+@end
+@implementation OVKMessageSendButton
+- (CGRect)backgroundRectForBounds:(CGRect)bounds { return CGRectMake(0,(bounds.size.height-29)/2,bounds.size.width,29); }
+@end
 @interface OVKCell : UITableViewCell
 @property (strong, nonatomic) OVKRemoteImageView *avatar;
 @property (strong, nonatomic) UILabel *heading;
@@ -110,6 +116,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 @property (copy, nonatomic) void (^photoTapped)(void);
 @property (assign, nonatomic) BOOL postStyle;
 @property (assign, nonatomic) BOOL dialogStyle;
+@property (assign, nonatomic) BOOL activeDialog;
 @property (assign, nonatomic) BOOL unread;
 @property (assign, nonatomic) BOOL chatStyle;
 @property (assign, nonatomic) BOOL outgoing;
@@ -124,7 +131,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 - (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
     self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
     if (self) {
-        self.avatar = [[OVKRemoteImageView alloc] init]; self.avatar.maxPixelSize=OVKLowMemoryDevice() ? 96 : 128; self.avatar.contentMode = UIViewContentModeScaleAspectFill; self.avatar.clipsToBounds = YES; self.avatar.userInteractionEnabled = YES; [self.avatar addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapAvatar)]]; self.avatar.layer.borderWidth = 1; self.avatar.layer.borderColor = [UIColor colorWithWhite:0 alpha:.2].CGColor;
+        self.avatar = [[OVKRemoteImageView alloc] init]; if ([self.avatar respondsToSelector:@selector(setMaxPixelSize:)]) self.avatar.maxPixelSize=OVKLowMemoryDevice() ? 96 : 128; self.avatar.contentMode = UIViewContentModeScaleAspectFill; self.avatar.clipsToBounds = YES; self.avatar.userInteractionEnabled = YES; [self.avatar addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapAvatar)]]; self.avatar.layer.borderWidth = 1; self.avatar.layer.borderColor = [UIColor colorWithWhite:0 alpha:.2].CGColor;
         self.bubble = [[UIImageView alloc] init]; [self.contentView addSubview:self.bubble];
         self.postHeader=[[UIView alloc] init]; self.postHeader.backgroundColor=[UIColor colorWithRed:.92 green:.945 blue:.96 alpha:1]; [self.contentView addSubview:self.postHeader];
         self.postFooter=[[UIView alloc] init]; self.postFooter.backgroundColor=[UIColor colorWithRed:.96 green:.97 blue:.98 alpha:1]; [self.contentView addSubview:self.postFooter];
@@ -169,11 +176,11 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     self.heading.hidden = self.chatStyle; self.avatar.hidden = self.chatStyle && self.outgoing;
     self.backgroundView.hidden = self.chatStyle || OVKDarkTheme();
     if (self.dialogStyle) {
-        self.backgroundView.hidden=YES; self.contentView.backgroundColor=self.unread ? (OVKDarkTheme() ? [UIColor colorWithRed:.22 green:.28 blue:.35 alpha:1] : [UIColor colorWithRed:.88 green:.91 blue:.94 alpha:1]) : OVKThemeSurface();
+        self.backgroundView.hidden=YES; BOOL selected=self.activeDialog || self.selected || self.highlighted; self.contentView.backgroundColor=selected ? OVKThemeAccent() : (self.unread ? (OVKDarkTheme() ? [UIColor colorWithRed:.22 green:.28 blue:.35 alpha:1] : [UIColor colorWithRed:.88 green:.91 blue:.94 alpha:1]) : OVKThemeSurface());
         self.avatar.frame=CGRectMake(8,9,56,56); self.avatar.layer.cornerRadius=OVKLowMemoryDevice() ? 0 : 5;
-        self.heading.font=[UIFont boldSystemFontOfSize:16]; self.heading.textColor=OVKThemeText(); self.heading.frame=CGRectMake(74,8,MAX(40,width-157),22);
+        self.heading.font=[UIFont boldSystemFontOfSize:16]; self.heading.textColor=selected ? [UIColor whiteColor] : OVKThemeText(); self.heading.frame=CGRectMake(74,8,MAX(40,width-157),22);
         self.stamp.textAlignment=NSTextAlignmentRight; self.stamp.frame=CGRectMake(width-80,10,70,18);
-        self.bodyLabel.font=[UIFont systemFontOfSize:14]; self.bodyLabel.textColor=OVKThemeSecondary(); self.bodyLabel.numberOfLines=2; self.bodyLabel.frame=CGRectMake(74,33,width-(self.unread ? 119 : 84),36); self.unreadBadge.frame=CGRectMake(width-38,43,28,20);
+        self.bodyLabel.font=[UIFont systemFontOfSize:14]; self.bodyLabel.textColor=selected ? [UIColor whiteColor] : OVKThemeSecondary(); self.stamp.textColor=self.bodyLabel.textColor; self.bodyLabel.numberOfLines=2; self.bodyLabel.frame=CGRectMake(74,33,width-(self.unread ? 119 : 84),36); self.unreadBadge.frame=CGRectMake(width-38,43,28,20);
         self.photo.hidden=YES;
     } else if (self.chatStyle) {
         CGFloat maxWidth = width-76;
@@ -227,6 +234,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 @property (strong, nonatomic) NSArray *postActions;
 @property (strong, nonatomic) UIPopoverController *sharePopover;
 @property (copy, nonatomic) NSString *mode;
+@property (copy, nonatomic) NSString *selectedDialogPeer;
 @property (strong, nonatomic) NSNumber *identifier;
 @property (strong, nonatomic) NSMutableArray *items;
 @property (strong, nonatomic) NSMutableDictionary *people;
@@ -252,6 +260,10 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 @property (strong, nonatomic) UILabel *notice;
 @end
 @implementation OVKListController
+@synthesize messageDraft = _messageDraft;
+- (NSString *)messageDraft { return self.messageField ? self.messageField.text : _messageDraft; }
+- (void)setMessageDraft:(NSString *)text { _messageDraft=[text copy]; self.messageField.text=text; }
+- (BOOL)hasPendingMessage { return self.sending; }
 - (id)initWithMode:(NSString *)mode identifier:(NSNumber *)identifier title:(NSString *)title {
     self = [super init];
     if (self) { self.rowHeights=[NSMutableDictionary dictionary]; self.postRequests=[NSMutableSet set]; self.friendshipStatus=-1; self.mode = mode; self.identifier = identifier; self.title = title; self.items = [NSMutableArray array]; self.people = [NSMutableDictionary dictionary]; }
@@ -273,10 +285,12 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     if ([self.mode isEqualToString:@"dialogs"]) { self.search=[[UISearchBar alloc] initWithFrame:CGRectMake(0,0,self.view.bounds.size.width,44)]; self.search.placeholder=OVKL(@"Поиск диалогов"); self.search.delegate=self; self.search.tintColor=[UIColor colorWithRed:.74 green:.78 blue:.81 alpha:1]; UIView *header=[[UIView alloc] initWithFrame:CGRectMake(0,0,self.view.bounds.size.width,68)]; self.search.autoresizingMask=UIViewAutoresizingFlexibleWidth; [header addSubview:self.search]; self.notice.frame=CGRectMake(0,44,header.bounds.size.width,24); self.notice.autoresizingMask=UIViewAutoresizingFlexibleWidth; [header addSubview:self.notice]; self.tableView.tableHeaderView=header; }
     if ([self isChat]) {
         self.tableView.tableFooterView=nil;
+        UIButton *titleButton=[UIButton buttonWithType:UIButtonTypeCustom]; titleButton.frame=CGRectMake(0,0,MAX(100,MIN(260,self.view.bounds.size.width-170)),40); titleButton.titleLabel.font=[UIFont boldSystemFontOfSize:14]; titleButton.titleLabel.numberOfLines=2; titleButton.titleLabel.textAlignment=NSTextAlignmentCenter; [titleButton setTitle:self.title forState:UIControlStateNormal]; [titleButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal]; titleButton.enabled=self.identifier.longLongValue>0 && self.identifier.longLongValue<2000000000LL; [titleButton addTarget:self action:@selector(openChatProfile) forControlEvents:UIControlEventTouchUpInside]; self.navigationItem.titleView=titleButton;
         self.navigationItem.rightBarButtonItem=[[UIBarButtonItem alloc] initWithTitle:OVKL(@"Ранее") style:UIBarButtonItemStylePlain target:self action:@selector(loadMore)]; self.navigationItem.rightBarButtonItem.enabled=NO;
         self.composerBar=[[UIView alloc] init]; self.composerBar.backgroundColor=[UIColor colorWithPatternImage:[UIImage imageNamed:@"SectionBar"]]; [self.view addSubview:self.composerBar];
         self.messageField=[[UITextField alloc] init]; self.messageField.borderStyle=UITextBorderStyleRoundedRect; self.messageField.font=[UIFont systemFontOfSize:15]; self.messageField.placeholder=OVKL(@"Написать сообщение"); self.messageField.delegate=self; self.messageField.returnKeyType=UIReturnKeySend; self.messageField.contentVerticalAlignment=UIControlContentVerticalAlignmentCenter; [self.composerBar addSubview:self.messageField];
-        self.sendButton=[UIButton buttonWithType:UIButtonTypeRoundedRect]; [self.sendButton setTitle:OVKL(@"Отпр.") forState:UIControlStateNormal]; [self.sendButton addTarget:self action:@selector(sendMessage) forControlEvents:UIControlEventTouchUpInside]; [self.composerBar addSubview:self.sendButton];
+        self.messageField.text=_messageDraft; [self.messageField addTarget:self action:@selector(chatDraftChanged) forControlEvents:UIControlEventEditingChanged];
+        self.sendButton=[[OVKMessageSendButton alloc] initWithFrame:CGRectZero]; [self.sendButton setTitle:OVKL(@"Отпр.") forState:UIControlStateNormal]; [self.sendButton addTarget:self action:@selector(sendMessage) forControlEvents:UIControlEventTouchUpInside]; [self.composerBar addSubview:self.sendButton];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(chatKeyboard:) name:UIKeyboardWillChangeFrameNotification object:nil];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(chatKeyboard:) name:UIKeyboardWillHideNotification object:nil];
     }
@@ -479,7 +493,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 - (NSDictionary *)postAt:(NSUInteger)index { return OVKDictionary([self visibleItems][index]); }
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews]; CGFloat width=self.view.bounds.size.width,height=self.view.bounds.size.height; CGFloat contentWidth=UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad ? MIN(720,width) : width; CGFloat margin=(width-contentWidth)/2; CGFloat bar=[self isChat] ? 44 : 0;
-    self.tableView.frame=CGRectMake(margin,0,contentWidth,MAX(0,height-bar-self.keyboardHeight)); self.composerBar.frame=CGRectMake(margin,MAX(0,height-bar-self.keyboardHeight),contentWidth,bar); self.messageField.frame=CGRectMake(8,1,contentWidth-83,41); self.sendButton.frame=CGRectMake(contentWidth-67,8,59,29);
+    self.tableView.frame=CGRectMake(margin,0,contentWidth,MAX(0,height-bar-self.keyboardHeight)); self.composerBar.frame=CGRectMake(margin,MAX(0,height-bar-self.keyboardHeight),contentWidth,bar); self.messageField.frame=CGRectMake(8,1,contentWidth-83,41); self.sendButton.frame=CGRectMake(contentWidth-67,0,59,44);
     self.footer.frame=CGRectMake((contentWidth-180)/2,8,180,33);
     self.view.backgroundColor=OVKThemeBackground(); if (fabs(self.layoutWidth-contentWidth)>.5) { self.layoutWidth=contentWidth; [self.rowHeights removeAllObjects]; if ([self isProfile]) [self updateProfileHeader]; [self.tableView reloadData]; }
 }
@@ -491,6 +505,8 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 }
 - (void)scrollToLatest { if ([self isChat] && self.items.count) [self.tableView scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:self.items.count-1 inSection:0] atScrollPosition:UITableViewScrollPositionBottom animated:NO]; }
 - (void)viewWillDisappear:(BOOL)animated { [super viewWillDisappear:animated]; [self.view endEditing:YES]; }
+- (void)openChatProfile { if (self.identifier.longLongValue>0 && self.identifier.longLongValue<2000000000LL) [self.navigationController pushViewController:[[OVKListController alloc] initWithMode:@"profile" identifier:self.identifier title:self.title] animated:YES]; }
+- (void)chatDraftChanged { if (self.draftChanged) self.draftChanged(self.messageField.text ?: @""); }
 - (BOOL)textFieldShouldReturn:(UITextField *)field { [self sendMessage]; return NO; }
 - (void)sendMessage {
     if (self.sending) return;
@@ -503,7 +519,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     [[OVKAPI shared] call:@"messages.send" parameters:params completion:^void(id result,NSError *error) {
         self.sending=NO; self.sendButton.enabled=YES; self.messageField.enabled=YES;
         if (error) { OVKAlert(OVKL(@"Не удалось отправить"),error.localizedDescription); return; }
-        self.messageField.text=@""; self.pendingRandomID=nil; self.pendingMessage=nil; [self refresh];
+        self.messageField.text=@""; [self chatDraftChanged]; self.pendingRandomID=nil; self.pendingMessage=nil; [self refresh];
     }];
 }
 - (NSDictionary *)personFor:(NSDictionary *)item {
@@ -551,7 +567,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     NSArray *photos=OVKPostPhotos(item); cell.photoCount=photos.count;
     for (NSUInteger index=0;index<cell.extraPhotos.count;index++) { OVKRemoteImageView *image=cell.extraPhotos[index]; if (index+1<photos.count) [image load:photos[index+1][@"preview"] ?: photos[index+1][@"url"]]; else [image load:@""]; }
     cell.morePhotos.text=photos.count>3 ? [NSString stringWithFormat:@"+%lu",(unsigned long)(photos.count-3)] : @"";
-    cell.dialogStyle=[self.mode isEqualToString:@"dialogs"]; cell.unread=[OVKDictionary(item[@"conversation"])[@"unread_count"] integerValue]>0;
+    cell.activeDialog=self.dialogSelected && [self.selectedDialogPeer isEqualToString:OVKString(OVKDictionary(OVKDictionary(item[@"conversation"])[@"peer"])[@"id"])]; cell.dialogStyle=[self.mode isEqualToString:@"dialogs"]; cell.unread=[OVKDictionary(item[@"conversation"])[@"unread_count"] integerValue]>0;
     cell.chatStyle = [self isChat]; cell.outgoing = [item[@"out"] boolValue] || [OVKString(item[@"from_id"]) isEqualToString:OVKString([OVKAPI shared].userID)]; cell.postStyle = [self isFeed]; cell.bodyLabel.font=[UIFont systemFontOfSize:[self isFeed] ? OVKFeedTextSize() : 14]; cell.heading.text = [self headingFor:item]; cell.bodyLabel.text = [self bodyFor:item];
     NSDictionary *person = [self.mode isEqualToString:@"friends"] ? item : [self personFor:item];
     if ([self.mode isEqualToString:@"dialogs"]) person = OVKDictionary(self.people[OVKString(OVKDictionary(OVKDictionary(item[@"conversation"])[@"peer"])[@"id"])]);
@@ -565,7 +581,10 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     cell.photoIndexTapped=^(NSUInteger index) { if (index<photos.count) [weakSelf.navigationController pushViewController:[[OVKPhotoController alloc] initWithPhotos:photos index:index] animated:YES]; };
     cell.commentTapped=^{ [weakSelf openCommentsFor:item]; };
     cell.liked=[OVKDictionary(item[@"likes"])[@"user_likes"] boolValue]; cell.likeButton.enabled=OVKPostAllowsAction(item,@"like",[OVKAPI shared].userID) && ![self.postRequests containsObject:[self postRequestKey:item]]; cell.likeTapped=^{ [weakSelf togglePostLike:item]; };
-    cell.avatarTapped = ^{ if (avatarURL.length) [weakSelf.navigationController pushViewController:[[OVKPhotoController alloc] initWithURL:avatarURL title:OVKL(@"Аватар")] animated:YES]; };
+    id rawProfileID=[self.mode isEqualToString:@"friends"] ? item[@"id"] : (item[@"from_id"] ?: item[@"source_id"] ?: person[@"id"]);
+    if ([self.mode isEqualToString:@"dialogs"]) rawProfileID=OVKDictionary(OVKDictionary(item[@"conversation"])[@"peer"])[@"id"];
+    NSNumber *profileID=@([OVKString(rawProfileID) longLongValue]); BOOL userProfile=profileID.longLongValue>0 && (![self.mode isEqualToString:@"dialogs"] || profileID.longLongValue<2000000000LL);
+    cell.avatarTapped = ^{ if (userProfile) [weakSelf.navigationController pushViewController:[[OVKListController alloc] initWithMode:@"profile" identifier:profileID title:OVKName(person)] animated:YES]; else if (avatarURL.length) [weakSelf.navigationController pushViewController:[[OVKPhotoController alloc] initWithURL:avatarURL title:OVKL(@"Аватар")] animated:YES]; };
     NSDictionary *message = [self.mode isEqualToString:@"dialogs"] ? OVKDictionary(item[@"last_message"]) : item;
     NSString *date = OVKDate(message[@"date"]); NSInteger unread = [OVKDictionary(item[@"conversation"])[@"unread_count"] integerValue];
     cell.unreadBadge.text=unread>99 ? @"99+" : [NSString stringWithFormat:@"%ld",(long)unread];
@@ -585,7 +604,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
         [self.navigationController pushViewController:[[OVKListController alloc] initWithMode:@"profile" identifier:item[@"id"] title:OVKName(item)] animated:YES];
     } else if ([self.mode isEqualToString:@"dialogs"]) {
         NSNumber *peer = OVKDictionary(OVKDictionary(item[@"conversation"])[@"peer"])[@"id"]; if (![peer respondsToSelector:@selector(integerValue)]) return;
-        [self.navigationController pushViewController:[[OVKListController alloc] initWithMode:@"chat" identifier:peer title:[self headingFor:item]] animated:YES];
+        if (self.dialogSelected) { self.selectedDialogPeer=OVKString(peer); [tableView reloadData]; self.dialogSelected(peer,[self headingFor:item]); } else [self.navigationController pushViewController:[[OVKListController alloc] initWithMode:@"chat" identifier:peer title:[self headingFor:item]] animated:YES];
     } else {
         OVKListController *post = [[OVKListController alloc] initWithMode:@"post" identifier:nil title:OVKL(@"Запись")]; post.singlePost = item; post.people = [self.people mutableCopy]; [self.navigationController pushViewController:post animated:YES];
     }

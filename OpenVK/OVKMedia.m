@@ -1,3 +1,4 @@
+#import "OVKMusicLayout.h"
 #import "OVKPerformance.h"
 #import "OVKLanguage.h"
 #import "OVKMedia.h"
@@ -192,6 +193,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
 @property (assign, nonatomic) NSUInteger loadedPixelSize;
 @end
 @implementation OVKRemoteImageView
+@synthesize maxPixelSize = _maxPixelSize;
 - (void)load:(NSString *)url {
     NSString *source=OVKMediaURL(url); CGFloat edge=MAX(self.bounds.size.width,self.bounds.size.height);
     NSUInteger pixels=self.maxPixelSize ?: (edge>0 ? (NSUInteger)ceil(edge*[[UIScreen mainScreen] scale]) : OVKPreviewPixelLimit()); pixels=MAX(64,MIN(OVKPreviewPixelLimit(),pixels));
@@ -280,7 +282,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
 - (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView { return self.photo; }
 - (void)dealloc { [_task cancel]; _scroll.delegate = nil; }
 @end
-@interface OVKPlaybackController : UIViewController <UIAlertViewDelegate>
+@interface OVKPlaybackController : UIViewController <UIAlertViewDelegate,UITableViewDataSource,UITableViewDelegate>
 @property (strong, nonatomic) NSDictionary *item;
 @property (strong, nonatomic) id<OVKCancellable> task;
 @property (strong, nonatomic) NSURL *localFile;
@@ -296,6 +298,23 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
 @property (strong, nonatomic) OVKLocalAudio *music;
 @property (assign, nonatomic) BOOL musicPrepared;
 @property (strong, nonatomic) UIView *musicView;
+@property (strong, nonatomic) UIView *musicTimeline;
+@property (strong, nonatomic) UIView *musicTransport;
+@property (strong, nonatomic) OVKRemoteImageView *musicCover;
+@property (strong, nonatomic) UITableView *musicQueueTable;
+@property (strong, nonatomic) UILabel *musicRemaining;
+@property (strong, nonatomic) UILabel *musicQueueLabel;
+@property (strong, nonatomic) MPVolumeView *musicVolume;
+@property (strong, nonatomic) MPVolumeView *musicRoute;
+@property (strong, nonatomic) NSArray *musicButtons;
+@property (strong, nonatomic) UIButton *musicRepeat;
+@property (strong, nonatomic) UIButton *musicShuffle;
+@property (strong, nonatomic) UILabel *musicRepeatOne;
+@property (strong, nonatomic) UIBarButtonItem *musicQueueButton;
+@property (assign, nonatomic) BOOL musicQueueVisible;
+@property (assign, nonatomic) NSInteger repeatMode;
+@property (assign, nonatomic) BOOL shuffleEnabled;
+@property (strong, nonatomic) NSArray *playOrder;
 @property (strong, nonatomic) UIButton *musicPlay;
 @property (strong, nonatomic) UISlider *musicSeek;
 @property (strong, nonatomic) UILabel *musicTime;
@@ -484,8 +503,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
         if (error) { [page failPlayback:error.localizedDescription]; return; }
         if (!page.wantsPlayback || (!page.music && [UIApplication sharedApplication].applicationState!=UIApplicationStateActive)) { [audio pause]; return; }
         page.started=YES; [page.prepareDeadline invalidate]; page.prepareDeadline=nil; [page.spinner stopAnimating]; page.status.hidden=YES;
-        page.navigationItem.rightBarButtonItems=@[[[UIBarButtonItem alloc] initWithTitle:OVKL(@"Сведения") style:UIBarButtonItemStylePlain target:page action:@selector(showVideoInfo)]];
-        [[page.navigationItem.rightBarButtonItems objectAtIndex:0] setBackgroundImage:[[UIImage imageNamed:@"MusicButton"] resizableImageWithCapInsets:UIEdgeInsetsMake(5,7,5,7)] forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+        [page configureMusicNavigation];
         [page endAudioTask]; [page.diagnostics addObject:@"AVAudioPlayer: play выполнен"]; [page updateMusic];
     }];
 }
@@ -600,27 +618,82 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     [self clearPlaybackFile];
     [self loadNextVideo];
 }
+- (void)configureMusicNavigation {
+    if (!self.musicView) return;
+    UIBarButtonItem *info=[[UIBarButtonItem alloc] initWithTitle:@"•••" style:UIBarButtonItemStylePlain target:self action:@selector(showVideoInfo)]; info.accessibilityLabel=OVKL(@"Сведения");
+    if (UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad) self.navigationItem.rightBarButtonItems=@[info];
+    else { self.musicQueueButton=[[UIBarButtonItem alloc] initWithTitle:self.musicQueueVisible ? OVKL(@"Обложка") : OVKL(@"Очередь") style:UIBarButtonItemStylePlain target:self action:@selector(toggleMusicQueue)]; self.navigationItem.rightBarButtonItems=@[info,self.musicQueueButton]; }
+    for (UIBarButtonItem *button in self.navigationItem.rightBarButtonItems) [button setBackgroundImage:[[UIImage imageNamed:@"MusicButton"] resizableImageWithCapInsets:UIEdgeInsetsMake(5,7,5,7)] forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+}
 - (void)buildMusicPlayer {
+    if (!self.queue.count) { self.queue=@[self.item]; self.queueIndex=0; }
     self.musicView=[[UIView alloc] initWithFrame:self.view.bounds]; self.musicView.autoresizingMask=UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight; self.musicView.backgroundColor=[UIColor blackColor]; [self.view addSubview:self.musicView];
-    CGFloat width=self.view.bounds.size.width, height=self.view.bounds.size.height;
-    CGFloat controls=140, art=MIN(width,MAX(80,height-controls));
-    OVKRemoteImageView *cover=[[OVKRemoteImageView alloc] initWithImage:[UIImage imageNamed:@"MusicCover"]]; cover.frame=CGRectMake((width-art)/2,0,art,art); cover.contentMode=UIViewContentModeScaleAspectFit; cover.autoresizingMask=UIViewAutoresizingFlexibleLeftMargin|UIViewAutoresizingFlexibleRightMargin; [self.musicView addSubview:cover];
-    NSDictionary *object=OVKDictionary(self.item[@"object"]); NSDictionary *album=OVKDictionary(object[@"album"]);
-    CGFloat titleWidth=MAX(100,MIN(220,width-170)); UIView *heading=[[UIView alloc] initWithFrame:CGRectMake(0,0,titleWidth,40)]; heading.autoresizingMask=UIViewAutoresizingFlexibleWidth;
+    self.musicTimeline=[[UIImageView alloc] initWithImage:[[UIImage imageNamed:@"MusicPanel"] resizableImageWithCapInsets:UIEdgeInsetsMake(3,3,3,3)]]; self.musicTimeline.userInteractionEnabled=YES; [self.musicView addSubview:self.musicTimeline];
+    self.musicQueueLabel=[[UILabel alloc] init]; self.musicTime=[[UILabel alloc] init]; self.musicRemaining=[[UILabel alloc] init];
+    for (UILabel *label in @[self.musicQueueLabel,self.musicTime,self.musicRemaining]) { label.backgroundColor=[UIColor clearColor]; label.textColor=[UIColor whiteColor]; label.font=[UIFont boldSystemFontOfSize:12]; label.textAlignment=NSTextAlignmentCenter; [self.musicTimeline addSubview:label]; }
+    self.musicQueueLabel.text=[NSString stringWithFormat:OVKL(@"%lu из %lu"),(unsigned long)(self.queueIndex+1),(unsigned long)self.queue.count];
+    self.musicSeek=[[UISlider alloc] init]; self.musicSeek.continuous=NO; [self.musicSeek addTarget:self action:@selector(seekMusic) forControlEvents:UIControlEventValueChanged]; [self.musicTimeline addSubview:self.musicSeek];
+    self.musicRepeat=[UIButton buttonWithType:UIButtonTypeCustom]; [self.musicRepeat addTarget:self action:@selector(toggleRepeat) forControlEvents:UIControlEventTouchUpInside]; [self.musicTimeline addSubview:self.musicRepeat];
+    self.musicShuffle=[UIButton buttonWithType:UIButtonTypeCustom]; [self.musicShuffle addTarget:self action:@selector(toggleShuffle) forControlEvents:UIControlEventTouchUpInside]; [self.musicTimeline addSubview:self.musicShuffle];
+    self.musicRepeatOne=[[UILabel alloc] initWithFrame:CGRectMake(31,2,10,12)]; self.musicRepeatOne.text=@"1"; self.musicRepeatOne.textColor=[UIColor whiteColor]; self.musicRepeatOne.backgroundColor=[UIColor clearColor]; self.musicRepeatOne.font=[UIFont boldSystemFontOfSize:10]; [self.musicRepeat addSubview:self.musicRepeatOne];
+    self.musicCover=[[OVKRemoteImageView alloc] initWithImage:[UIImage imageNamed:@"MusicCover"]]; self.musicCover.contentMode=UIViewContentModeScaleAspectFit; [self.musicView addSubview:self.musicCover];
+    NSDictionary *object=OVKDictionary(self.item[@"object"]),*album=OVKDictionary(object[@"album"]);
+    CGFloat titleWidth=MAX(90,MIN(280,self.view.bounds.size.width-190)); UIView *heading=[[UIView alloc] initWithFrame:CGRectMake(0,0,titleWidth,40)];
     NSArray *lines=@[OVKString(object[@"artist"]),OVKString(object[@"title"]).length ? OVKString(object[@"title"]) : self.title,OVKString(album[@"title"])];
-    for (NSUInteger i=0;i<3;i++) { UILabel *line=[[UILabel alloc] initWithFrame:CGRectMake(0,i*13,titleWidth,13)]; line.autoresizingMask=UIViewAutoresizingFlexibleWidth; line.text=lines[i]; line.font=i==1 ? [UIFont boldSystemFontOfSize:12] : [UIFont systemFontOfSize:11]; line.textColor=i==1 ? [UIColor whiteColor] : [UIColor lightGrayColor]; line.backgroundColor=[UIColor clearColor]; line.textAlignment=NSTextAlignmentCenter; [heading addSubview:line]; }
-    self.navigationItem.titleView=heading;
-     NSString *coverURL=OVKPhotoSource(OVKDictionary(album[@"thumb"])); if (coverURL.length) [cover load:coverURL];
-    UIView *panel=[[UIImageView alloc] initWithImage:[[UIImage imageNamed:@"MusicPanel"] resizableImageWithCapInsets:UIEdgeInsetsMake(3,3,3,3)]]; panel.userInteractionEnabled=YES; panel.frame=CGRectMake(0,height-controls,width,controls); panel.autoresizingMask=UIViewAutoresizingFlexibleTopMargin|UIViewAutoresizingFlexibleWidth; [self.musicView addSubview:panel];
-    self.musicSeek=[[UISlider alloc] initWithFrame:CGRectMake(18,8,width-36,24)]; self.musicSeek.autoresizingMask=UIViewAutoresizingFlexibleWidth; self.musicSeek.continuous=NO; [self.musicSeek addTarget:self action:@selector(seekMusic) forControlEvents:UIControlEventValueChanged]; [panel addSubview:self.musicSeek];
-    self.musicTime=[[UILabel alloc] initWithFrame:CGRectMake(20,33,width-40,18)]; self.musicTime.autoresizingMask=UIViewAutoresizingFlexibleWidth; self.musicTime.textAlignment=NSTextAlignmentCenter; self.musicTime.textColor=[UIColor lightGrayColor]; self.musicTime.backgroundColor=[UIColor clearColor]; self.musicTime.font=[UIFont systemFontOfSize:11]; [panel addSubview:self.musicTime];
-    for (NSUInteger i=0;i<3;i++) { UIButton *button=[UIButton buttonWithType:UIButtonTypeCustom]; button.frame=CGRectMake(i*width/3,50,width/3,48); button.autoresizingMask=UIViewAutoresizingFlexibleLeftMargin|UIViewAutoresizingFlexibleRightMargin; [button setImage:[UIImage imageNamed:@[@"PreviousTrack",@"PauseTrack",@"NextTrack"][i]] forState:UIControlStateNormal]; button.accessibilityLabel=@[OVKL(@"Предыдущий трек"),OVKL(@"Пауза"),OVKL(@"Следующий трек")][i]; if (i==1) { self.musicPlay=button; [button addTarget:self action:@selector(toggleMusic) forControlEvents:UIControlEventTouchUpInside]; } else { button.tag=i==0 ? -1 : 1; button.enabled=i==0 ? self.queueIndex>0 : self.queueIndex+1<self.queue.count; button.alpha=button.enabled ? 1 : .3; [button addTarget:self action:@selector(changeTrack:) forControlEvents:UIControlEventTouchUpInside]; } [panel addSubview:button]; }
-    MPVolumeView *volume=[[MPVolumeView alloc] initWithFrame:CGRectMake(25,107,width-50,28)]; volume.autoresizingMask=UIViewAutoresizingFlexibleWidth; volume.showsRouteButton=YES; [panel addSubview:volume];
+    for (NSUInteger i=0;i<3;i++) { UILabel *line=[[UILabel alloc] initWithFrame:CGRectMake(0,i*13,titleWidth,13)]; line.autoresizingMask=UIViewAutoresizingFlexibleWidth; line.text=lines[i]; line.font=i==1 ? [UIFont boldSystemFontOfSize:12] : [UIFont systemFontOfSize:11]; line.textColor=i==1 ? [UIColor whiteColor] : [UIColor lightGrayColor]; line.backgroundColor=[UIColor clearColor]; line.textAlignment=NSTextAlignmentCenter; [heading addSubview:line]; } self.navigationItem.titleView=heading;
+    NSString *coverURL=OVKPhotoSource(OVKDictionary(album[@"thumb"])); if (coverURL.length) [self.musicCover load:coverURL];
+    self.musicQueueTable=[[UITableView alloc] initWithFrame:CGRectZero style:UITableViewStylePlain]; self.musicQueueTable.delegate=self; self.musicQueueTable.dataSource=self; self.musicQueueTable.rowHeight=48; self.musicQueueTable.backgroundColor=[UIColor colorWithWhite:.16 alpha:1]; self.musicQueueTable.separatorColor=[UIColor colorWithWhite:.28 alpha:1]; self.musicQueueTable.tableFooterView=[[UIView alloc] initWithFrame:CGRectZero]; [self.musicView addSubview:self.musicQueueTable];
+    self.musicTransport=[[UIImageView alloc] initWithImage:[[UIImage imageNamed:@"MusicPanel"] resizableImageWithCapInsets:UIEdgeInsetsMake(3,3,3,3)]]; self.musicTransport.userInteractionEnabled=YES; [self.musicView addSubview:self.musicTransport];
+    NSMutableArray *buttons=[NSMutableArray array];
+    for (NSUInteger i=0;i<3;i++) { UIButton *button=[UIButton buttonWithType:UIButtonTypeCustom]; [button setImage:[UIImage imageNamed:@[@"PreviousTrack",@"PauseTrack",@"NextTrack"][i]] forState:UIControlStateNormal]; button.accessibilityLabel=@[OVKL(@"Предыдущий трек"),OVKL(@"Пауза"),OVKL(@"Следующий трек")][i]; if (i==1) { self.musicPlay=button; [button addTarget:self action:@selector(toggleMusic) forControlEvents:UIControlEventTouchUpInside]; } else { button.tag=i==0 ? -1 : 1; [button addTarget:self action:@selector(changeTrack:) forControlEvents:UIControlEventTouchUpInside]; } [self.musicTransport addSubview:button]; [buttons addObject:button]; } self.musicButtons=buttons;
+    self.musicRoute=[[MPVolumeView alloc] init]; self.musicRoute.showsVolumeSlider=NO; self.musicRoute.showsRouteButton=YES; [self.musicTimeline addSubview:self.musicRoute];
+    self.musicVolume=[[MPVolumeView alloc] init]; self.musicVolume.showsRouteButton=NO; [self.musicTransport addSubview:self.musicVolume];
     self.musicTimer=[NSTimer timerWithTimeInterval:OVKLowMemoryDevice() ? .5 : .3 target:self selector:@selector(refreshLocalAudio) userInfo:nil repeats:YES]; [[NSRunLoop mainRunLoop] addTimer:self.musicTimer forMode:NSRunLoopCommonModes];
-    self.navigationItem.hidesBackButton=YES;
-    UIBarButtonItem *back=[[UIBarButtonItem alloc] initWithTitle:OVKL(@"Музыка") style:UIBarButtonItemStylePlain target:self action:@selector(backToMusic)];
-    [back setBackgroundImage:[[UIImage imageNamed:@"MusicButton"] resizableImageWithCapInsets:UIEdgeInsetsMake(5,7,5,7)] forState:UIControlStateNormal barMetrics:UIBarMetricsDefault]; self.navigationItem.leftBarButtonItem=back;
-    [self musicReady];
+    self.navigationItem.hidesBackButton=YES; UIBarButtonItem *back=[[UIBarButtonItem alloc] initWithTitle:OVKL(@"Музыка") style:UIBarButtonItemStylePlain target:self action:@selector(backToMusic)]; [back setBackgroundImage:[[UIImage imageNamed:@"MusicButton"] resizableImageWithCapInsets:UIEdgeInsetsMake(5,7,5,7)] forState:UIControlStateNormal barMetrics:UIBarMetricsDefault]; self.navigationItem.leftBarButtonItem=back;
+    [self configureMusicNavigation]; [self updateMusicModes]; [self.view setNeedsLayout]; [self musicReady];
+}
+- (void)viewDidLayoutSubviews {
+    [super viewDidLayoutSubviews]; if (!self.musicView) return;
+    CGFloat width=self.view.bounds.size.width,height=self.view.bounds.size.height; BOOL pad=UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad;
+    OVKMusicLayout layout=OVKMusicPlayerLayout(width,height,pad,self.musicQueueVisible);
+    self.musicView.frame=self.view.bounds;
+    self.musicTimeline.frame=CGRectMake(layout.timeline.x,layout.timeline.y,layout.timeline.width,layout.timeline.height);
+    self.musicCover.frame=CGRectMake(layout.cover.x,layout.cover.y,layout.cover.width,layout.cover.height); self.musicCover.hidden=!layout.showCover;
+    self.musicQueueTable.frame=CGRectMake(layout.queue.x,layout.queue.y,layout.queue.width,layout.queue.height); self.musicQueueTable.hidden=!layout.showQueue;
+    self.musicTransport.frame=CGRectMake(layout.transport.x,layout.transport.y,layout.transport.width,layout.transport.height);
+    self.musicQueueLabel.frame=CGRectMake(60,4,width-120,20); self.musicTime.frame=CGRectMake(10,28,52,24); self.musicRemaining.frame=CGRectMake(width-64,28,54,24); self.musicSeek.frame=CGRectMake(70,26,width-140,28);
+    self.musicRoute.frame=CGRectMake(width/2-22,53,44,30);
+    self.musicRepeat.frame=CGRectMake(10,53,44,30); self.musicShuffle.frame=CGRectMake(width-54,53,44,30);
+    for (NSUInteger i=0;i<self.musicButtons.count;i++) ((UIButton *)self.musicButtons[i]).frame=CGRectMake(width/2-32+((NSInteger)i-1)*96,4,64,52);
+    CGFloat volumeWidth=MIN(560,width-40); self.musicVolume.frame=CGRectMake((width-volumeWidth)/2,64,volumeWidth,28);
+}
+- (void)toggleMusicQueue { self.musicQueueVisible=!self.musicQueueVisible; [self configureMusicNavigation]; [self.view setNeedsLayout]; if (self.musicQueueVisible && self.queueIndex<self.queue.count) [self.musicQueueTable scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:self.queueIndex inSection:0] atScrollPosition:UITableViewScrollPositionMiddle animated:NO]; }
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return self.queue.count; }
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)path {
+    UITableViewCell *cell=[tableView dequeueReusableCellWithIdentifier:@"music-queue"]; if (!cell) cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"music-queue"];
+    NSDictionary *item=OVKDictionary(self.queue[path.row]),*object=OVKDictionary(item[@"object"]); cell.textLabel.text=OVKString(object[@"title"]).length ? OVKString(object[@"title"]) : OVKString(item[@"title"]); cell.textLabel.font=[UIFont systemFontOfSize:15]; cell.textLabel.textColor=path.row==self.queueIndex ? [UIColor colorWithRed:.4 green:.7 blue:1 alpha:1] : [UIColor whiteColor]; cell.detailTextLabel.text=OVKString(OVKDictionary(item[@"object"])[@"artist"]); cell.detailTextLabel.textColor=[UIColor lightGrayColor]; cell.backgroundColor=[UIColor colorWithWhite:path.row==self.queueIndex ? .23 : .16 alpha:1]; cell.contentView.backgroundColor=cell.backgroundColor; cell.accessoryType=UITableViewCellAccessoryNone; cell.indentationWidth=16; cell.indentationLevel=2;
+    UILabel *number=(UILabel *)[cell.contentView viewWithTag:3201]; if (!number) { number=[[UILabel alloc] initWithFrame:CGRectMake(5,0,30,48)]; number.tag=3201; number.backgroundColor=[UIColor clearColor]; number.textAlignment=NSTextAlignmentCenter; number.font=[UIFont boldSystemFontOfSize:14]; [cell.contentView addSubview:number]; } number.text=path.row==self.queueIndex ? (self.music.playing ? @"▶" : @"II") : [NSString stringWithFormat:@"%ld",(long)path.row+1]; number.textColor=cell.textLabel.textColor; return cell;
+}
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)path { [tableView deselectRowAtIndexPath:path animated:YES]; if ((NSUInteger)path.row!=self.queueIndex) [self playQueueIndex:path.row]; }
+- (void)toggleRepeat { self.repeatMode=(self.repeatMode+1)%3; [self updateMusicModes]; }
+- (void)toggleShuffle { self.shuffleEnabled=!self.shuffleEnabled; self.playOrder=nil; [self updateMusicModes]; }
+- (NSArray *)orderedQueue {
+    if (!self.shuffleEnabled) return nil;
+    if (self.playOrder.count!=self.queue.count) { NSMutableArray *order=[NSMutableArray arrayWithObject:@(self.queueIndex)]; NSMutableArray *rest=[NSMutableArray array]; for (NSUInteger i=0;i<self.queue.count;i++) if (i!=self.queueIndex) [rest addObject:@(i)]; for (NSUInteger n=rest.count;n>1;n--) [rest exchangeObjectAtIndex:n-1 withObjectAtIndex:arc4random_uniform((uint32_t)n)]; [order addObjectsFromArray:rest]; self.playOrder=order; } return self.playOrder;
+}
+- (NSInteger)nextMusicIndex:(NSInteger)direction automatic:(BOOL)automatic {
+    NSArray *order=[self orderedQueue]; NSUInteger position=order ? [order indexOfObject:@(self.queueIndex)] : self.queueIndex; if (position==NSNotFound) return -1;
+    long next=OVKMusicNextPosition(self.queue.count,position,(int)direction,(int)self.repeatMode,automatic); if (next<0) return -1; return order ? [order[next] integerValue] : next;
+}
+- (void)updateMusicModes {
+    [self.musicRepeat setImage:[UIImage imageNamed:self.repeatMode ? @"MusicRepeatActive" : @"MusicRepeat"] forState:UIControlStateNormal]; self.musicRepeatOne.hidden=self.repeatMode!=2; self.musicRepeat.accessibilityLabel=OVKL(@"Повтор"); self.musicRepeat.accessibilityValue=@[OVKL(@"Выключен"),OVKL(@"Вся очередь"),OVKL(@"Один трек")][self.repeatMode];
+    [self.musicShuffle setImage:[UIImage imageNamed:self.shuffleEnabled ? @"MusicShuffleActive" : @"MusicShuffle"] forState:UIControlStateNormal]; self.musicShuffle.accessibilityLabel=OVKL(@"Перемешать"); self.musicShuffle.accessibilityValue=self.shuffleEnabled ? OVKL(@"Включено") : OVKL(@"Выключен");
+    if (self.musicButtons.count==3) { UIButton *previous=self.musicButtons[0],*next=self.musicButtons[2]; previous.enabled=self.musicPosition>3 || [self nextMusicIndex:-1 automatic:NO]>=0; next.enabled=[self nextMusicIndex:1 automatic:NO]>=0; previous.alpha=previous.enabled ? 1 : .3; next.alpha=next.enabled ? 1 : .3; }
+}
+- (void)playQueueIndex:(NSInteger)index {
+    if (index<0 || index>=(NSInteger)self.queue.count) return;
+    if ((NSUInteger)index==self.queueIndex) { [self.music seek:0]; self.started=NO; [self startPreparedPlayback]; return; }
+    [self releasePlayer]; [self clearPlaybackFile]; self.queueIndex=index; self.item=self.queue[index]; self.title=OVKString(self.item[@"title"]); [self resolveAndLoad];
 }
 - (void)refreshLocalAudio { [self.music refresh]; }
 - (void)musicReady { if (!self.stopped && self.music && self.musicPrepared && !self.started) [self startPreparedPlayback]; }
@@ -633,19 +706,16 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
 - (void)updateMusic {
     if (self.music.completed && self.started) {
         self.started=NO;
-        if (self.queueIndex+1<self.queue.count) { UIButton *next=[UIButton buttonWithType:UIButtonTypeCustom]; next.tag=1; [self changeTrack:next]; return; }
+        NSInteger next=[self nextMusicIndex:1 automatic:YES]; if (next>=0) { [self playQueueIndex:next]; return; }
         self.wantsPlayback=NO; [self pauseOutputAndReleaseSession];
     }
     self.musicPosition=self.music.currentTime; self.musicDuration=self.music.duration; if (!self.view.window) { [self updateNowPlaying]; return; } double now=self.musicPosition, total=self.musicDuration; if (!isfinite(now)) now=0; if (!isfinite(total) || total<=0) total=0;
     if (!self.musicSeek.tracking) self.musicSeek.value=total>0 ? now/total : 0;
-    self.musicTime.text=[NSString stringWithFormat:@"%ld:%02ld  /  %ld:%02ld",(long)now/60,(long)now%60,(long)llround(total)/60,(long)llround(total)%60];
+    self.musicTime.text=[NSString stringWithFormat:@"%ld:%02ld",(long)now/60,(long)now%60]; long remaining=(long)ceil(MAX(0,total-now)); self.musicRemaining.text=total>0 ? [NSString stringWithFormat:@"−%ld:%02ld",remaining/60,remaining%60] : @"−–:––"; [self updateMusicModes];
+    UITableViewCell *current=[self.musicQueueTable cellForRowAtIndexPath:[NSIndexPath indexPathForRow:self.queueIndex inSection:0]]; ((UILabel *)[current.contentView viewWithTag:3201]).text=self.music.playing ? @"▶" : @"II";
     [self.musicPlay setImage:[UIImage imageNamed:self.music.playing ? @"PauseTrack" : @"PlayTrack"] forState:UIControlStateNormal]; self.musicPlay.accessibilityLabel=self.music.playing ? OVKL(@"Пауза") : OVKL(@"Воспроизвести"); [self updateNowPlaying];
 }
-- (void)changeTrack:(UIButton *)sender {
-    NSInteger index=(NSInteger)self.queueIndex+sender.tag; if (index<0 || index>=(NSInteger)self.queue.count) return;
-    [self releasePlayer]; [self clearPlaybackFile];
-    self.queueIndex=index; self.item=self.queue[index]; self.title=OVKString(self.item[@"title"]); [self resolveAndLoad];
-}
+- (void)changeTrack:(UIButton *)sender { if (sender.tag<0 && self.musicPosition>3) { [self.music seek:0]; return; } [self playQueueIndex:[self nextMusicIndex:sender.tag automatic:NO]]; }
 - (void)movieReady:(NSNotification *)note {
     if (![NSThread isMainThread]) { __weak OVKPlaybackController *weakSelf=self; dispatch_async(dispatch_get_main_queue(), ^{ [weakSelf movieReady:note]; }); return; }
     if (self.stopped || !self.movie || (note && note.object!=self.movie) || self.started) return;
@@ -657,7 +727,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     ++self.playbackGeneration; self.nowPlayingUpdated=0; [self endAudioTask]; [self.prepareDeadline invalidate];
     [self.musicTimer invalidate]; self.musicTimer=nil;
     OVKLocalAudio *audio=self.music; NSString *owner=self.sessionOwner;
-    [audio stopWithCompletion:^{ OVKDeactivateSession(owner); }]; self.music=nil; self.musicPrepared=NO; [self.musicView removeFromSuperview]; self.musicView=nil; self.prepareDeadline=nil;
+    [audio stopWithCompletion:^{ OVKDeactivateSession(owner); }]; self.music=nil; self.musicPrepared=NO; [self.musicView removeFromSuperview]; self.musicView=nil; self.musicQueueTable.dataSource=nil; self.musicQueueTable.delegate=nil; self.musicQueueTable=nil; self.musicTimeline=nil; self.musicTransport=nil; self.musicCover=nil; self.musicVolume=nil; self.musicRoute=nil; self.musicButtons=nil; self.musicRepeat=nil; self.musicShuffle=nil; self.musicRepeatOne=nil; self.musicQueueLabel=nil; self.musicRemaining=nil; self.musicTime=nil; self.musicSeek=nil; self.musicPlay=nil; self.prepareDeadline=nil;
     [self.exporter cancelExport]; self.exporter=nil; [self.soundAsset cancelLoading]; self.soundAsset=nil;
     if (self.soundFile) [[NSFileManager defaultManager] removeItemAtURL:self.soundFile error:NULL]; self.soundFile=nil;
     [self.asset cancelLoading]; self.asset=nil; self.started=NO;

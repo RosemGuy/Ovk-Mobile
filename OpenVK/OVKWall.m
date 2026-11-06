@@ -98,7 +98,7 @@
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)path { NSDictionary *item=self.items[path.row]; CGSize text=[OVKString(item[@"text"]) sizeWithFont:[UIFont systemFontOfSize:14] constrainedToSize:CGSizeMake(tableView.bounds.size.width-72,20000) lineBreakMode:NSLineBreakByWordWrapping]; return MAX(82,ceil(text.height)+66)+(OVKPlayableAttachments(item).count ? 26 : 0); }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)path {
     NSDictionary *item=self.items[path.row]; UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil]; CGFloat width=tableView.bounds.size.width;
-    OVKRemoteImageView *avatar=[[OVKRemoteImageView alloc] initWithFrame:CGRectMake(8,10,42,42)]; avatar.contentMode=UIViewContentModeScaleAspectFill; avatar.clipsToBounds=YES; NSDictionary *person=OVKDictionary(self.people[OVKString(item[@"from_id"])]); [avatar load:OVKString(person[@"photo_100"] ?: person[@"photo_50"])]; [cell.contentView addSubview:avatar];
+    OVKRemoteImageView *avatar=[[OVKRemoteImageView alloc] initWithFrame:CGRectMake(8,10,42,42)]; avatar.contentMode=UIViewContentModeScaleAspectFill; avatar.clipsToBounds=YES; NSDictionary *person=OVKDictionary(self.people[OVKString(item[@"from_id"])]); [avatar load:OVKString(person[@"photo_100"] ?: person[@"photo_50"])]; [cell.contentView addSubview:avatar]; if ([OVKString(item[@"from_id"]) longLongValue]>0) { avatar.userInteractionEnabled=YES; avatar.tag=[OVKString(item[@"from_id"]) integerValue]; [avatar addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(commentAvatarTapped:)]]; }
     UILabel *name=[[UILabel alloc] initWithFrame:CGRectMake(60,8,width-72,20)]; name.font=[UIFont boldSystemFontOfSize:13]; name.textColor=OVKBlue(); name.text=[self nameFor:item]; [cell.contentView addSubview:name];
     NSString *text=OVKString(item[@"text"]); CGSize size=[text sizeWithFont:[UIFont systemFontOfSize:14] constrainedToSize:CGSizeMake(width-72,20000) lineBreakMode:NSLineBreakByWordWrapping];
     UILabel *body=[[UILabel alloc] initWithFrame:CGRectMake(60,32,width-72,MAX(18,ceil(size.height)))]; body.font=[UIFont systemFontOfSize:14]; body.numberOfLines=0; body.text=text; [cell.contentView addSubview:body];
@@ -107,6 +107,7 @@
     OVKThemeCell(cell); for (UIView *view in cell.contentView.subviews) if ([view isKindOfClass:[UILabel class]]) { UILabel *label=(UILabel *)view; label.backgroundColor=[UIColor clearColor]; label.textColor=label==name ? OVKThemeAccent() : (label==stamp ? OVKThemeSecondary() : OVKThemeText()); }
     return cell;
 }
+- (void)commentAvatarTapped:(UITapGestureRecognizer *)tap { NSNumber *identifier=@(tap.view.tag); if (identifier.longLongValue>0) [self.navigationController pushViewController:[[OVKListController alloc] initWithMode:@"profile" identifier:identifier title:OVKL(@"Профиль")] animated:YES]; }
 - (void)addComment { [self composeReply:nil]; }
 - (void)composeReply:(NSDictionary *)comment {
     if (!self.canPost || !self.reference) return;

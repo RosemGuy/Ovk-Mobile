@@ -35,9 +35,10 @@
 @end
 @implementation OVKInstancesController
 + (NSArray *)entries {
-    NSMutableArray *result = [@[@{@"site":@"https://openvk.xyz",@"api":@"https://openvk.xyz"},@{@"site":@"https://openvk.org",@"api":@"https://api.openvk.org"}] mutableCopy];
+    NSMutableArray *result = [@[@{@"site":@"https://openvk.org",@"api":@"https://api.openvk.org"}] mutableCopy];
     for (id value in OVKArray([[NSUserDefaults standardUserDefaults] arrayForKey:@"OVKSavedInstances"])) {
         NSDictionary *entry = OVKDictionary(value); NSString *site = OVKString(entry[@"site"]); NSString *api = OVKString(entry[@"api"]);
+        if ([site isEqualToString:@"https://openvk.xyz"]) continue;
         if (!site.length || !api.length || ![OVKAPI validatedServer:site] || ![OVKAPI validatedServer:api]) continue;
         BOOL duplicate = NO;
         for (NSDictionary *existing in result) if ([existing[@"site"] isEqual:site] && [existing[@"api"] isEqual:api]) duplicate = YES;

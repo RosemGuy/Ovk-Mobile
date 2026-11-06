@@ -151,9 +151,9 @@ static NSError *OVKError(NSInteger code, NSString *message) {
 @end
 @implementation OVKAPI
 + (NSString *)requestUserAgent { return @"curl"; }
-+ (OVKAPI *)shared { static OVKAPI *api; static dispatch_once_t once; dispatch_once(&once, ^{ api = [[OVKAPI alloc] init]; api.server = @"https://openvk.xyz"; api.siteServer = api.server;
++ (OVKAPI *)shared { static OVKAPI *api; static dispatch_once_t once; dispatch_once(&once, ^{ api = [[OVKAPI alloc] init]; api.server = @"https://api.openvk.org"; api.siteServer = @"https://openvk.org";
     NSString *savedAPI = [[NSUserDefaults standardUserDefaults] stringForKey:@"OVKSelectedAPI"]; NSString *savedSite = [[NSUserDefaults standardUserDefaults] stringForKey:@"OVKSelectedSite"];
-    if (savedAPI.length && savedSite.length) { NSString *validAPI = [OVKAPI validatedServer:savedAPI]; NSString *validSite = [OVKAPI validatedServer:savedSite]; if (validAPI && validSite) { api.server = validAPI; api.siteServer = validSite; } }
+    if (savedAPI.length && savedSite.length) { NSString *validAPI = [OVKAPI validatedServer:savedAPI]; NSString *validSite = [OVKAPI validatedServer:savedSite]; if (validAPI && validSite && ![validSite isEqualToString:@"https://openvk.xyz"]) { api.server = validAPI; api.siteServer = validSite; } }
  }); return api; }
 + (NSString *)validatedServer:(NSString *)input {
     NSString *value = [input stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];

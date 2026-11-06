@@ -91,6 +91,78 @@
         60
       ]
     },
+    "MusicRepeat.png": {
+      "source": "Payload/vkclient.app/audioplayer_replay.png",
+      "source_sha256": "9dcb0618a5fe166867b9db21324179385de8d0e25a9bb36b3de239f06850eff5",
+      "sha256": "177500188430d7b582bd2bfe93806fd78f5423aee69f05c6dd511e6df1f0cdb5",
+      "size": [
+        19,
+        17
+      ]
+    },
+    "MusicRepeat@2x.png": {
+      "source": "Payload/vkclient.app/audioplayer_replay@2x.png",
+      "source_sha256": "890db3b272b9a1fe2752e956423c06b9044c9d2d1592ca1eae05f84250657280",
+      "sha256": "8ff54d20cf6b8de60a8dc59d15319683d9e14551569dd12c7edeb8e2db34ed74",
+      "size": [
+        38,
+        34
+      ]
+    },
+    "MusicRepeatActive.png": {
+      "source": "Payload/vkclient.app/audioplayer_replay_hl.png",
+      "source_sha256": "82cc4f43a2334df0a32b601c54061ea3395e28b3051cb6bb17e29bc56ae0a07b",
+      "sha256": "c28e3426c1a627fe1f7a78ae7059e1b0b14227d2e11db352a3869f00b021c547",
+      "size": [
+        19,
+        17
+      ]
+    },
+    "MusicRepeatActive@2x.png": {
+      "source": "Payload/vkclient.app/audioplayer_replay_hl@2x.png",
+      "source_sha256": "9bd32c4874d53912de72abd2503a4816c051eb35f8295ce2b8d161da16f29549",
+      "sha256": "7efc3f4d904057058c5b441364ff76854fa6184ab55a8235fbfb5a4c44a215e8",
+      "size": [
+        38,
+        34
+      ]
+    },
+    "MusicShuffle.png": {
+      "source": "Payload/vkclient.app/audioplayer_shuffle.png",
+      "source_sha256": "a3519fe0d172a9ec9543f56e0459c2f65dd307c663f1c2c56ae7b33402a9814b",
+      "sha256": "2d8673c8a5ef7c6203992ff59497b8feb5b73eeb0b37577e44ee3bbd3cacedf0",
+      "size": [
+        19,
+        17
+      ]
+    },
+    "MusicShuffle@2x.png": {
+      "source": "Payload/vkclient.app/audioplayer_shuffle@2x.png",
+      "source_sha256": "f43acd978d790f7dd29fa4584a0b5d93a15b7716e9ec2126093f70f92821c928",
+      "sha256": "fad12dbfc16d439ca59dce3226454ee7c963afc20609a28ded81d18dad3c469f",
+      "size": [
+        38,
+        34
+      ]
+    },
+    "MusicShuffleActive.png": {
+      "source": "Payload/vkclient.app/audioplayer_shuffle_hl.png",
+      "source_sha256": "6111ea1f9abc9bbc6a63e94e8b126eefc3ac42988229f94e357a83eb809002d5",
+      "sha256": "8b9468cec34432ad5af3a8177321cc1f27d62798315fa759078e0a090dc1bbdf",
+      "size": [
+        19,
+        17
+      ]
+    },
+    "MusicShuffleActive@2x.png": {
+      "source": "Payload/vkclient.app/audioplayer_shuffle_hl@2x.png",
+      "source_sha256": "18a3e9b97dfb530cd0c58ca02ef66abe02ff35e549b8df00b8be434a6387f25a",
+      "sha256": "74a98161d0211abfc1be9355059e7b1c4ee9de1eacb03994bc8a39cbb7c8d204",
+      "size": [
+        38,
+        34
+      ]
+    },
     "MusicNavigation.png": {
       "source": "Payload/vkclient.app/black_header.png",
       "source_sha256": "6f16da576d5a2260870d4c65bd2a1182f70c6a007ae08bcb1e61364e134b65e7",

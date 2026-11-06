@@ -9,6 +9,10 @@ void OVKStyleNavigation(UINavigationController *navigation);
 @end
 @interface OVKListController : UIViewController
 - (id)initWithMode:(NSString *)mode identifier:(NSNumber *)identifier title:(NSString *)title;
+@property (copy, nonatomic) void (^dialogSelected)(NSNumber *peer,NSString *title);
+@property (copy, nonatomic) NSString *messageDraft;
+@property (copy, nonatomic) void (^draftChanged)(NSString *text);
+- (BOOL)hasPendingMessage;
 @end
 @interface OVKAppDelegate : UIResponder <UIApplicationDelegate>
 @property (strong, nonatomic) UIWindow *window;
@@ -30,4 +34,7 @@ NSString *OVKMenuTitle(NSString *mode);
 @end
 
 @interface OVKAboutController : UIViewController
+@end
+
+@interface OVKMessagesController : UIViewController
 @end

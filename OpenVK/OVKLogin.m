@@ -251,7 +251,7 @@
     self.advancedButton=[UIButton buttonWithType:UIButtonTypeCustom]; self.advancedButton.frame=CGRectMake(20,376,280,30); [self.advancedButton setTitle:OVKL(@"Дополнительно ▾") forState:UIControlStateNormal]; self.advancedButton.titleLabel.font=[UIFont systemFontOfSize:12]; [self.advancedButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal]; [self.advancedButton addTarget:self action:@selector(toggleAdvanced) forControlEvents:UIControlEventTouchUpInside]; [panel addSubview:self.advancedButton];
     self.advancedPanel=[[UIView alloc] initWithFrame:CGRectMake(0,416,320,526)]; self.advancedPanel.hidden=YES; [panel addSubview:self.advancedPanel];
     UIView *advanced=self.advancedPanel;
-    self.instancePicker=[[UISegmentedControl alloc] initWithItems:@[@".xyz",@".org",OVKL(@"Другой")]]; self.instancePicker.frame=CGRectMake(20,0,280,32); self.instancePicker.tintColor=OVKBlue(); [self.instancePicker addTarget:self action:@selector(selectInstance) forControlEvents:UIControlEventValueChanged]; [advanced addSubview:self.instancePicker];
+    self.instancePicker=[[UISegmentedControl alloc] initWithItems:@[@"openvk.org",OVKL(@"Другой")]]; self.instancePicker.frame=CGRectMake(20,0,280,32); self.instancePicker.tintColor=OVKBlue(); [self.instancePicker addTarget:self action:@selector(selectInstance) forControlEvents:UIControlEventValueChanged]; [advanced addSubview:self.instancePicker];
     self.serverField=[[UITextField alloc] initWithFrame:CGRectMake(20,44,280,38)]; self.apiField=[[UITextField alloc] initWithFrame:CGRectMake(20,92,280,38)];
     for (UITextField *field in @[self.serverField,self.apiField]) { field.borderStyle=UITextBorderStyleRoundedRect; field.keyboardType=UIKeyboardTypeURL; field.autocapitalizationType=UITextAutocapitalizationTypeNone; field.autocorrectionType=UITextAutocorrectionTypeNo; field.font=[UIFont systemFontOfSize:12]; [advanced addSubview:field]; }
     self.serverField.placeholder=@"https://example.org"; self.apiField.placeholder=OVKL(@"API-домен (пусто = домен сайта)");
@@ -266,9 +266,10 @@
     self.status=[[UILabel alloc] initWithFrame:CGRectMake(20,404,280,100)]; self.status.backgroundColor=[UIColor clearColor]; self.status.textColor=[UIColor colorWithWhite:.9 alpha:1]; self.status.font=[UIFont systemFontOfSize:11]; self.status.numberOfLines=0; self.status.textAlignment=NSTextAlignmentCenter; self.status.text=OVKL(@"Ovk-Mobile alpha • iOS 6\nНеофициальный клиент"); [advanced addSubview:self.status];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(loginKeyboard:) name:UIKeyboardWillChangeFrameNotification object:nil];
     NSString *site = [OVKAPI shared].siteServer ?: [OVKAPI shared].server;
-    self.instancePicker.selectedSegmentIndex = [site isEqualToString:@"https://openvk.xyz"] ? 0 : ([site isEqualToString:@"https://openvk.org"] ? 1 : 2);
-    self.customServer = self.instancePicker.selectedSegmentIndex == 2 ? site : @"";
-    self.customAPI = self.instancePicker.selectedSegmentIndex == 2 ? [OVKAPI shared].server : @"";
+    if ([site isEqualToString:@"https://openvk.xyz"]) site=@"https://openvk.org";
+    self.instancePicker.selectedSegmentIndex = [site isEqualToString:@"https://openvk.org"] ? 0 : 1;
+    self.customServer = self.instancePicker.selectedSegmentIndex == 1 ? site : @"";
+    self.customAPI = self.instancePicker.selectedSegmentIndex == 1 ? [OVKAPI shared].server : @"";
     self.serverField.enabled = NO; [self selectInstance];
 }
 - (void)toggleAdvanced {
@@ -290,13 +291,12 @@
 - (void)selectInstance {
     [self.view endEditing:YES];
     if (self.serverField.enabled) { self.customServer = self.serverField.text; self.customAPI = self.apiField.text; }
-    BOOL custom = self.instancePicker.selectedSegmentIndex == 2;
+    BOOL custom = self.instancePicker.selectedSegmentIndex == 1;
     self.serverField.enabled = custom;
     if (custom) { self.serverField.text = self.customServer ?: @""; self.apiField.text = self.customAPI ?: @""; }
     else {
-        BOOL xyz = self.instancePicker.selectedSegmentIndex == 0;
-        self.serverField.text = xyz ? @"https://openvk.xyz" : @"https://openvk.org";
-        self.apiField.text = xyz ? @"https://openvk.xyz" : @"https://api.openvk.org";
+        self.serverField.text = @"https://openvk.org";
+        self.apiField.text = @"https://api.openvk.org";
     }
     [self.oauthButton setTitle:OVKL(@"Войти") forState:UIControlStateNormal]; self.instanceLabel.text=self.serverField.text; self.loginForm.password.text=@""; self.loginForm.code.text=@"";
     self.tokenField.text = @"";
@@ -315,7 +315,7 @@
     self.checkButton.enabled = NO; self.oauthButton.enabled = NO; self.tokenButton.enabled = NO; self.instancePicker.enabled = NO; self.serverField.enabled = NO; self.apiField.enabled = NO; self.status.text = OVKL(@"Проверка API без пароля…");
     NSString *server = [[OVKAPI shared].server copy];
     [[OVKAPI shared] checkConnection:^(id response,NSError *error) {
-        self.checkButton.enabled = YES; self.oauthButton.enabled = YES; self.tokenButton.enabled = YES; self.instancePicker.enabled = YES; self.serverField.enabled = self.instancePicker.selectedSegmentIndex == 2; self.apiField.enabled = YES;
+        self.checkButton.enabled = YES; self.oauthButton.enabled = YES; self.tokenButton.enabled = YES; self.instancePicker.enabled = YES; self.serverField.enabled = self.instancePicker.selectedSegmentIndex == 1; self.apiField.enabled = YES;
         self.status.text = error ? [NSString stringWithFormat:@"%@\n%@",server,error.localizedDescription] : OVKL(@"API отвечает. Вход проверяется отдельно.");
         if ([error.domain isEqualToString:@"OpenVK"] && error.code == 403) {
             UIAlertView *alert = [[UIAlertView alloc] initWithTitle:OVKL(@"HTTP 403 — доступ запрещён") message:self.status.text delegate:self cancelButtonTitle:OVKL(@"Закрыть") otherButtonTitles:OVKL(@"Открыть проверку"),nil]; alert.tag = 403; [alert show];
@@ -327,7 +327,7 @@
     __weak OVKLoginController *weakSelf = self;
     OVKInstancesController *list = [[OVKInstancesController alloc] initWithSelection:^(NSString *site,NSString *api) {
         OVKLoginController *page = weakSelf; if (!page) return;
-        page.customServer = site; page.customAPI = api; page.serverField.enabled = NO; page.instancePicker.selectedSegmentIndex = 2; [page selectInstance]; [page prepare];
+        page.customServer = site; page.customAPI = api; page.serverField.enabled = NO; page.instancePicker.selectedSegmentIndex = 1; [page selectInstance]; [page prepare];
     }];
     UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:list]; OVKStyleNavigation(nav); [self presentViewController:nav animated:YES completion:nil];
 }
@@ -358,7 +358,7 @@
     self.oauthButton.enabled = NO; self.tokenButton.enabled = NO; self.instancePicker.enabled = NO; self.serverField.enabled = NO; self.apiField.enabled = NO; self.checkButton.enabled = NO; self.status.text = OVKL(@"Проверяем аккаунт…");
     [api call:@"users.get" parameters:@{@"fields":@"photo_100,status"} completion:^(id result, NSError *error) {
         self.view.userInteractionEnabled=YES; self.navigationItem.rightBarButtonItem.enabled=YES; self.navigationItem.leftBarButtonItem.enabled=YES;
-        self.oauthButton.enabled = YES; self.tokenButton.enabled = YES; self.instancePicker.enabled = YES; self.serverField.enabled = self.instancePicker.selectedSegmentIndex == 2; self.apiField.enabled = YES; self.checkButton.enabled = YES;
+        self.oauthButton.enabled = YES; self.tokenButton.enabled = YES; self.instancePicker.enabled = YES; self.serverField.enabled = self.instancePicker.selectedSegmentIndex == 1; self.apiField.enabled = YES; self.checkButton.enabled = YES;
         NSDictionary *user = OVKDictionary([OVKArray(result) count] ? result[0] : nil);
         if (error || [user[@"id"] integerValue] <= 0) { api.token = nil; self.status.text = OVKL(@"Вход не выполнен"); OVKAlert(OVKL(@"Ошибка входа"),error.localizedDescription ?: OVKL(@"Сервер не вернул профиль аккаунта")); return; }
         api.userID = user[@"id"]; api.accountName=[[NSString stringWithFormat:@"%@ %@",OVKString(user[@"first_name"]),OVKString(user[@"last_name"])] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];

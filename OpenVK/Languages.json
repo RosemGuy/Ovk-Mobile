@@ -315,5 +315,14 @@
   "Авторы": "Authors",
   "Проект на GitHub": "Project on GitHub",
   "Тема, цвет и размер текста": "Theme, color and text size",
-  "Директор дабстепа": "Dubstep director"
+  "Директор дабстепа": "Dubstep director",
+  "Обложка": "Artwork",
+  "Очередь": "Queue",
+  "Повтор": "Repeat",
+  "Выключен": "Off",
+  "Вся очередь": "All tracks",
+  "Один трек": "One track",
+  "Перемешать": "Shuffle",
+  "Включено": "On",
+  "Выберите диалог слева": "Select a conversation on the left"
 }

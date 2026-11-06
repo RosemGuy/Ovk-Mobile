@@ -89,7 +89,7 @@ static UIImage *OVKMenuGlyph(void) {
 @property (assign, nonatomic) BOOL opened;
 @end
 @implementation OVKRootController
-- (CGFloat)menuWidth { return UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad ? 240 : MIN(280,self.view.bounds.size.width-55); }
+- (CGFloat)menuWidth { return UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad ? ([self.selected isEqualToString:@"dialogs"] ? 64 : 240) : MIN(280,self.view.bounds.size.width-55); }
 - (void)viewDidLoad {
     [super viewDidLoad]; self.sections = [NSMutableDictionary dictionary]; self.view.backgroundColor = [UIColor colorWithPatternImage:[UIImage imageNamed:@"SidebarTexture"]]; self.view.clipsToBounds = YES;
     OVKConfigureEdges(self);
@@ -125,13 +125,14 @@ static UIImage *OVKMenuGlyph(void) {
 - (void)menuOrderChanged:(NSNotification *)note { [self.menu reloadData]; NSUInteger index=[[self menuModes] indexOfObject:self.selected]; if (index!=NSNotFound) [self.menu selectRowAtIndexPath:[NSIndexPath indexPathForRow:index inSection:0] animated:NO scrollPosition:UITableViewScrollPositionNone]; }
 - (NSArray *)menuModes { NSMutableArray *modes=[OVKMenuOrder() mutableCopy]; if (!OVKExperimentalVideo()) [modes removeObject:@"video"]; return modes; }
 - (NSString *)menuTitle:(NSString *)mode { return OVKMenuTitle(mode); }
-- (void)viewDidLayoutSubviews { [super viewDidLayoutSubviews]; BOOL pad=UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad; CGFloat side=pad ? [self menuWidth] : 0; self.menu.frame=CGRectMake(0,0,[self menuWidth],self.view.bounds.size.height); CGAffineTransform transform=self.active.view.transform; self.active.view.transform=CGAffineTransformIdentity; self.active.view.frame=CGRectMake(side,0,self.view.bounds.size.width-side,self.view.bounds.size.height); self.active.view.transform=pad ? CGAffineTransformIdentity : transform; if (pad) { self.active.view.transform=CGAffineTransformIdentity; [self.cover removeFromSuperview]; self.cover=nil; self.opened=NO; } }
+- (void)viewDidLayoutSubviews { [super viewDidLayoutSubviews]; BOOL pad=UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad; CGFloat side=pad ? [self menuWidth] : 0; self.menu.frame=CGRectMake(0,0,[self menuWidth],self.view.bounds.size.height); BOOL compact=pad && [self.selected isEqualToString:@"dialogs"]; self.nameLabel.hidden=compact; self.statusLabel.hidden=compact; self.profileImage.frame=CGRectMake(compact ? 9.5 : 15,20,45,45); CGAffineTransform transform=self.active.view.transform; self.active.view.transform=CGAffineTransformIdentity; self.active.view.frame=CGRectMake(side,0,self.view.bounds.size.width-side,self.view.bounds.size.height); self.active.view.transform=pad ? CGAffineTransformIdentity : transform; if (pad) { self.active.view.transform=CGAffineTransformIdentity; [self.cover removeFromSuperview]; self.cover=nil; self.opened=NO; } }
 - (void)experimentalChanged:(NSNotification *)note { [self.menu reloadData]; if ([self.selected isEqualToString:@"video"] && !OVKExperimentalVideo()) [self showSection:@"audio" title:OVKL(@"Музыка")]; }
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return [self menuModes].count; }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)path {
     UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
     NSString *mode=[self menuModes][path.row];
     NSString *icon=@{@"friends":@"Friends",@"photo":@"PhotoMedia",@"dialogs":@"Messages",@"news":@"News",@"profile":@"Profile",@"audio":@"AudioMedia",@"video":@"VideoMedia",@"archive":@"News",@"settings":@"Settings"}[mode];
+    cell.textLabel.hidden=UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad && [self.selected isEqualToString:@"dialogs"]; cell.accessibilityLabel=[self menuTitle:mode];
     cell.textLabel.text=[self menuTitle:mode]; cell.textLabel.font=[UIFont boldSystemFontOfSize:17]; cell.textLabel.textColor=[UIColor colorWithWhite:.83 alpha:1]; cell.textLabel.backgroundColor=[UIColor clearColor]; cell.textLabel.shadowColor=[UIColor blackColor]; cell.textLabel.shadowOffset=CGSizeMake(0,-1);
     cell.imageView.image=[UIImage imageNamed:icon]; cell.backgroundView=[[UIImageView alloc] initWithImage:[UIImage imageNamed:@"MenuRow"]]; cell.selectedBackgroundView=[[UIImageView alloc] initWithImage:OVKThemeChrome(@"MenuSelected")]; cell.textLabel.highlightedTextColor=[UIColor whiteColor]; return cell;
 }
@@ -146,18 +147,19 @@ static UIImage *OVKMenuGlyph(void) {
     if (!nav) {
         UIViewController *page;
         if ([mode isEqualToString:@"settings"]) page = [[OVKSettingsController alloc] init];
+        else if ([mode isEqualToString:@"dialogs"] && UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad) page=[[OVKMessagesController alloc] init];
         else if ([mode isEqualToString:@"audio"]) page=[[OVKMusicController alloc] init];
         else if ([@[@"photo",@"video"] containsObject:mode]) page = [[OVKLibraryController alloc] initWithKind:mode identifier:[OVKAPI shared].userID title:title];
         else page = [[OVKListController alloc] initWithMode:mode identifier:[OVKAPI shared].userID title:title];
-        nav = [[UINavigationController alloc] initWithRootViewController:page]; OVKStyleNavigation(nav); self.sections[mode] = nav;
+        nav = [[UINavigationController alloc] initWithRootViewController:page]; OVKStyleNavigation(nav); if ([page isKindOfClass:[OVKMessagesController class]]) [nav setNavigationBarHidden:YES animated:NO]; self.sections[mode] = nav;
     }
     if (self.active != nav) {
         [self.active willMoveToParentViewController:nil]; [self.active.view removeFromSuperview]; [self.active removeFromParentViewController];
         self.active = nav; [self addChildViewController:nav]; nav.view.frame = self.view.bounds; nav.view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight; [self.view addSubview:nav.view]; [nav didMoveToParentViewController:self];
         if (nav.view.tag != 2101) { nav.view.tag = 2101; UISwipeGestureRecognizer *right = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(swipeOpen)]; right.direction = UISwipeGestureRecognizerDirectionRight; [nav.view addGestureRecognizer:right]; }
     }
+    self.selected = mode; [self.menu reloadData];
     [self.view setNeedsLayout];
-    self.selected = mode;
     NSArray *menuModes=[self menuModes];
     NSUInteger selectedRow = [menuModes indexOfObject:mode];
     if (selectedRow != NSNotFound) [self.menu selectRowAtIndexPath:[NSIndexPath indexPathForRow:selectedRow inSection:0] animated:NO scrollPosition:UITableViewScrollPositionNone];

@@ -6,6 +6,7 @@ cd "$(dirname "$0")"
 project_dir="$PWD"
 stage='toolchain'
 package_dir=''
+architecture_info=''
 result_file="$project_dir/Build-result.txt"
 build_diagnostics() {
     if [ ! -f "$project_dir/build-ipa.log" ]; then echo 'Compilation has not started.'; return; fi
@@ -25,6 +26,7 @@ cleanup() {
             echo "Ovk-Mobile alpha — IPA build failed"
             echo "Stage: $stage; exit: $result"
             echo "Xcode directory: ${DEVELOPER_DIR:-not selected}"
+            if [ -n "$architecture_info" ]; then echo 'Architecture check:'; echo "$architecture_info"; fi
             echo 'Errors and failed commands (from complete build log):'
             build_diagnostics
             echo 'Last build output:'
@@ -78,8 +80,13 @@ if [ ! -f "$app_path/OpenVKClassic" ] || [ ! -f "$app_path/Info.plist" ]; then
     echo 'Device application is missing; read build-ipa.log.' >&2; exit 1
 fi
 stage='architecture check'
-architectures="$(xcrun lipo -archs "$app_path/OpenVKClassic")"
-case " $architectures " in *' armv7 '*|*' armv7s '*) ;; *) echo "Wrong architecture: $architectures" >&2; exit 1;; esac
+# Xcode 5 lipo supports -info, but not the newer -archs option.
+if ! architecture_info="$(xcrun lipo -info "$app_path/OpenVKClassic" 2>&1)"; then
+    echo "$architecture_info" >&2; exit 1
+fi
+architectures="${architecture_info##*: }"
+case " $architectures " in *' i386 '*|*' x86_64 '*) echo "Simulator architecture: $architecture_info" >&2; exit 1;; esac
+case " $architectures " in *' armv7 '*|*' armv7s '*) ;; *) echo "Wrong architecture: $architecture_info" >&2; exit 1;; esac
 stage='ad-hoc signature'
 package_dir="$(mktemp -d "${TMPDIR:-/tmp}/ovk-ipa.XXXXXX")"
 mkdir "$package_dir/Payload"

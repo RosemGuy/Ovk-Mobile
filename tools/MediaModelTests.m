@@ -34,6 +34,8 @@ int main(void) {
         Expect([OVKVideoAudioURL(@{@"files":@{@"audio":@"/sound.m4a"}}) hasSuffix:@"/sound.m4a"],"Explicit separate audio URL retained");
         Expect(!OVKVideoAudioURL(@{@"files":@{@"audio":[NSNull null]}}).length,"Malformed separate audio does not crash");
         Expect(!OVKVideoURLs(@{@"files":@{@"mp4_360":@"javascript:alert(1)"}}).count,"Invalid candidate schemes rejected");
+        NSArray *previews=OVKPlayableAttachments(@{@"attachments":@[@{@"type":@"photo",@"photo":@{@"photo_1280":@"/full.jpg",@"photo_604":@"/preview.jpg",@"photo_130":@"/tiny.jpg"}}]});
+        Expect([previews[0][@"url"] hasSuffix:@"/full.jpg"] && [previews[0][@"preview"] hasSuffix:@"/preview.jpg"],"Thumbnail chosen separately without replacing viewer source");
         puts("PASS: media URLs, photo sizes, multiple attachments, audio/video, voice, explicit/reposts, malformed data");
     }
     return 0;

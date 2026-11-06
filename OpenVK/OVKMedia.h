@@ -13,6 +13,7 @@ typedef void (^OVKDownloadCompletion)(NSURL *file, NSError *error);
 @end
 @interface OVKRemoteImageView : UIImageView
 @property (copy, nonatomic) NSString *source;
+@property (assign, nonatomic) NSUInteger maxPixelSize;
 - (void)load:(NSString *)url;
 @end
 @interface OVKAttachmentsController : UITableViewController

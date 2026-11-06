@@ -16,10 +16,12 @@ static NSDictionary *Parse(NSInteger status, BOOL token, id body, BOOL cancelled
     [request setValue:[NSURL URLWithString:@"https://example.invalid/token"] forKey:@"origin"];
     [request setValue:@"application/json" forKey:@"mimeType"];
     __block id observedResult = nil; __block NSError *observedError = nil; __block NSUInteger calls = 0;
-    OVKCompletion completion = ^(id result,NSError *error){ observedResult = result; observedError = error; calls++; };
+    OVKCompletion completion = ^(id result,NSError *error){ Expect([NSThread isMainThread],@"UI completion stays on main thread"); observedResult = result; observedError = error; calls++; };
     [request setValue:completion forKey:@"completion"];
     if (cancelled401) [request connection:nil didFailWithError:[NSError errorWithDomain:NSURLErrorDomain code:NSURLErrorUserCancelledAuthentication userInfo:nil]];
     else [request connectionDidFinishLoading:nil];
+    NSDate *deadline=[NSDate dateWithTimeIntervalSinceNow:3];
+    while (!calls && [deadline timeIntervalSinceNow]>0) [[NSRunLoop mainRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:.01]];
     Expect(calls == 1,@"Exactly one completion");
     return @{@"result":observedResult ?: [NSNull null],@"error":observedError ?: [NSNull null]};
 }
@@ -48,6 +50,15 @@ int main(void) {
         Expect(![[blocked[@"error"] userInfo][@"OVKAuthReason"] isEqual:@"invalid_password"],@"HTML 403 is not a password error");
         NSDictionary *users = Parse(200,NO,@{@"response":@[@{@"id":@7}]},NO);
         Expect([users[@"result"] isKindOfClass:[NSArray class]],@"Standard API array response");
+        NSObject *pending=[[NSClassFromString(@"OVKRequest") alloc] init];
+        [pending setValue:[[NSJSONSerialization dataWithJSONObject:@{@"response":@1} options:0 error:NULL] mutableCopy] forKey:@"data"];
+        [pending setValue:@200 forKey:@"status"];
+        __block NSUInteger cancelCalls=0; __block NSInteger cancelCode=0;
+        OVKCompletion cancelCompletion=^(id result,NSError *error) { cancelCalls++; cancelCode=error.code; Expect([NSThread isMainThread],@"Cancel callback stays on main thread"); };
+        [pending setValue:cancelCompletion forKey:@"completion"]; [pending connectionDidFinishLoading:nil]; [(id<OVKCancellable>)pending cancel];
+        NSDate *cancelDeadline=[NSDate dateWithTimeIntervalSinceNow:.3];
+        while ([cancelDeadline timeIntervalSinceNow]>0) [[NSRunLoop mainRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:.01]];
+        Expect(cancelCalls==1 && cancelCode==NSURLErrorCancelled,@"Cancel suppresses queued JSON result");
         NSString *sample = @"pass &+?=пароль";
         NSDictionary *decoded = OVKQuery([@"password=" stringByAppendingString:OVKEncode(sample)]);
         Expect([decoded[@"password"] isEqual:sample],@"Form encoding preserves symbols and Unicode");

@@ -1,3 +1,4 @@
+#import "OVKPerformance.h"
 #import "OVKLanguage.h"
 #import "OVKMediaModel.h"
 #import "OVKAPI.h"
@@ -23,6 +24,14 @@ NSString *OVKPhotoSource(NSDictionary *photo) {
     for (NSString *key in @[@"photo_2560",@"photo_1280",@"photo_807",@"photo_604",@"photo_200",@"photo_130",@"url",@"src"]) {
         NSString *url=OVKMediaURL(OVKString(photo[key])); if (url.length) return url;
     } return @"";
+}
+static NSString *OVKPhotoPreview(NSDictionary *photo) {
+    NSMutableArray *candidates=[NSMutableArray array]; NSArray *sizes=OVKArray(photo[@"sizes"]); if (!sizes.count) sizes=OVKArray(photo[@"images"]); [candidates addObjectsFromArray:sizes];
+    for (NSNumber *edge in @[@75,@130,@200,@604,@807,@1280,@2560]) { NSString *url=OVKString(photo[[NSString stringWithFormat:@"photo_%@",edge]]); if (url.length) [candidates addObject:@{@"url":url,@"width":edge,@"height":edge}]; }
+    double target=OVKPreviewPixelLimit(),chosenEdge=0; NSString *chosen=@"";
+    for (id value in candidates) { NSDictionary *size=OVKDictionary(value); double edge=MAX([OVKString(size[@"width"]) doubleValue],[OVKString(size[@"height"]) doubleValue]); NSString *url=OVKMediaURL(OVKString(size[@"url"] ?: size[@"src"])); if (!url.length || edge<=0) continue;
+        if (!chosen.length || (chosenEdge<target && edge>chosenEdge) || (edge>=target && edge<chosenEdge)) { chosen=url; chosenEdge=edge; }
+    } return chosen.length ? chosen : OVKPhotoSource(photo);
 }
 NSArray *OVKVideoURLs(NSDictionary *video) {
     NSDictionary *files=OVKDictionary(video[@"files"]); NSMutableArray *urls=[NSMutableArray array];
@@ -51,7 +60,7 @@ NSArray *OVKPlayableAttachments(NSDictionary *post) {
     for (id value in OVKArray(post[@"attachments"])) {
         NSDictionary *a = OVKDictionary(value); NSString *type = OVKString(a[@"type"]); NSDictionary *object = OVKDictionary(a[type]);
         NSString *title = OVKString(object[@"title"]), *url = @"", *preview = @"";
-        if ([type isEqualToString:@"photo"]) { url = OVKPhotoSource(object); preview = url; if (!title.length) title = OVKL(@"Фотография"); }
+        if ([type isEqualToString:@"photo"]) { url = OVKPhotoSource(object); preview = OVKPhotoPreview(object); if (!title.length) title = OVKL(@"Фотография"); }
         else if ([type isEqualToString:@"audio"]) { url = OVKMediaURL(OVKString(object[@"url"])); NSString *artist = OVKString(object[@"artist"]); if (artist.length) title = [NSString stringWithFormat:@"%@ — %@",artist,title]; }
         else if ([type isEqualToString:@"video"]) { url = OVKDirectVideoURL(object); preview = OVKMediaURL(OVKString(object[@"photo_800"] ?: object[@"photo_320"] ?: object[@"photo_130"])); if (!preview.length) preview = OVKPhotoSource(@{@"sizes":OVKArray(object[@"image"] ?: object[@"images"])}); }
         else if ([type isEqualToString:@"audio_message"] || [type isEqualToString:@"voice"] || [type isEqualToString:@"doc"]) {

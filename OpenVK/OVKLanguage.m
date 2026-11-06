@@ -1,5 +1,6 @@
 #import "OVKLanguage.h"
-BOOL OVKLanguageIsEnglish(void) { return [[[NSUserDefaults standardUserDefaults] stringForKey:@"OVKLanguage"] isEqualToString:@"en"]; }
+static BOOL OVKEnglish;
+BOOL OVKLanguageIsEnglish(void) { static dispatch_once_t once; dispatch_once(&once, ^{ OVKEnglish=[[[NSUserDefaults standardUserDefaults] stringForKey:@"OVKLanguage"] isEqualToString:@"en"]; }); return OVKEnglish; }
 NSString *OVKL(NSString *russian) {
     if (!OVKLanguageIsEnglish()) return russian;
     static NSDictionary *strings=nil; static dispatch_once_t once;
@@ -8,6 +9,7 @@ NSString *OVKL(NSString *russian) {
 }
 void OVKSetLanguage(NSString *language) {
     if (![@[@"ru",@"en"] containsObject:language]) return;
+    OVKLanguageIsEnglish(); OVKEnglish=[language isEqualToString:@"en"];
     [[NSUserDefaults standardUserDefaults] setObject:language forKey:@"OVKLanguage"];
     [[NSNotificationCenter defaultCenter] postNotificationName:@"OVKLanguageChanged" object:nil];
 }

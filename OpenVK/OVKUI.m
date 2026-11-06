@@ -1,3 +1,5 @@
+#import "OVKPerformance.h"
+#import <objc/runtime.h>
 #import "OVKLanguage.h"
 #import "OVKUI.h"
 #import "OVKAPI.h"
@@ -40,8 +42,20 @@ static NSString *OVKName(NSDictionary *user) {
 }
 static NSString *OVKDate(id timestamp) {
     if (![timestamp respondsToSelector:@selector(doubleValue)] || [timestamp doubleValue] <= 0) return @"";
-    NSDateFormatter *format = [[NSDateFormatter alloc] init]; format.locale = [[NSLocale alloc] initWithLocaleIdentifier:OVKLanguageIsEnglish() ? @"en_US" : @"ru_RU"]; format.dateFormat = OVKLanguageIsEnglish() ? @"d MMM yyyy HH:mm" : @"d MMM yyyy 'в' HH:mm";
+    static NSDateFormatter *format=nil; static NSInteger language=-1; NSInteger selected=OVKLanguageIsEnglish(); if (!format || language!=selected) { format=[[NSDateFormatter alloc] init]; language=selected; format.locale=[[NSLocale alloc] initWithLocaleIdentifier:selected ? @"en_US" : @"ru_RU"]; format.dateFormat=selected ? @"d MMM yyyy HH:mm" : @"d MMM yyyy 'в' HH:mm"; }
     return [format stringFromDate:[NSDate dateWithTimeIntervalSince1970:[timestamp doubleValue]]];
+}
+static NSString *OVKCompactDate(id timestamp,BOOL timeOnly) {
+    NSTimeInterval seconds=[OVKString(timestamp) doubleValue]; if (seconds<=0) return @"";
+    static NSDateFormatter *clock,*day; static NSInteger language=-1; NSInteger selected=OVKLanguageIsEnglish();
+    if (!clock || language!=selected) { language=selected; NSLocale *locale=[[NSLocale alloc] initWithLocaleIdentifier:selected ? @"en_US" : @"ru_RU"]; clock=[[NSDateFormatter alloc] init]; clock.locale=locale; clock.dateFormat=@"HH:mm"; day=[[NSDateFormatter alloc] init]; day.locale=locale; day.dateFormat=@"d MMM"; }
+    NSDate *date=[NSDate dateWithTimeIntervalSince1970:seconds]; return [(timeOnly || [[NSDate date] timeIntervalSinceDate:date]<86400 ? clock : day) stringFromDate:date];
+}
+static NSArray *OVKPostAttachments(NSDictionary *post) {
+    static char key; NSDictionary *saved=objc_getAssociatedObject(post,&key);
+    NSString *context=[NSString stringWithFormat:@"%@|%@|%d",[OVKAPI shared].siteServer ?: @"",[OVKAPI shared].server ?: @"",OVKLanguageIsEnglish()];
+    if ([saved[@"context"] isEqualToString:context]) return saved[@"items"];
+    NSArray *items=OVKPlayableAttachments(post); objc_setAssociatedObject(post,&key,@{@"context":context,@"items":items},OBJC_ASSOCIATION_RETAIN_NONATOMIC); return items;
 }
 static NSString *OVKAttachmentText(NSDictionary *post) {
     NSMutableArray *names = [NSMutableArray array];
@@ -58,16 +72,16 @@ static NSString *OVKAttachmentText(NSDictionary *post) {
 static NSString *OVKPostBody(NSDictionary *post) {
     if (([OVKString(post[@"explicit"]) boolValue] || [OVKString(post[@"is_explicit"]) boolValue])) return OVKL(@"Содержимое 18+ скрыто. Доступно на сайте OpenVK.");
     NSString *text = OVKString(post[@"text"]); NSString *attachments = OVKAttachmentText(post);
-    return text.length || attachments.length ? [NSString stringWithFormat:@"%@%@%@",text,text.length && attachments.length ? @"\n\n" : @"",attachments] : (OVKPlayableAttachments(post).count ? @"" : OVKL(@"Запись без текста"));
+    return text.length || attachments.length ? [NSString stringWithFormat:@"%@%@%@",text,text.length && attachments.length ? @"\n\n" : @"",attachments] : (OVKPostAttachments(post).count ? @"" : OVKL(@"Запись без текста"));
 }
 static NSString *OVKPhotoURL(NSDictionary *post) {
-    for (NSDictionary *item in OVKPlayableAttachments(post)) if ([item[@"type"] isEqualToString:@"photo"]) return item[@"url"];
+    for (NSDictionary *item in OVKPostAttachments(post)) if ([item[@"type"] isEqualToString:@"photo"]) return OVKString(item[@"preview"]).length ? item[@"preview"] : item[@"url"];
     return @"";
 }
-static NSArray *OVKPostPhotos(NSDictionary *post) { NSMutableArray *photos=[NSMutableArray array]; for (NSDictionary *item in OVKPlayableAttachments(post)) if ([item[@"type"] isEqualToString:@"photo"]) [photos addObject:item]; return photos; }
+static NSArray *OVKPostPhotos(NSDictionary *post) { NSMutableArray *photos=[NSMutableArray array]; for (NSDictionary *item in OVKPostAttachments(post)) if ([item[@"type"] isEqualToString:@"photo"]) [photos addObject:item]; return photos; }
 static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage) {
     NSUInteger count=OVKPostPhotos(post).count; if (collage && count>1) return count==2 ? MIN(260,width*.62) : MIN(280,width*.65);
-    for (NSDictionary *item in OVKPlayableAttachments(post)) {
+    for (NSDictionary *item in OVKPostAttachments(post)) {
         if (![item[@"type"] isEqualToString:@"photo"]) continue;
         NSDictionary *photo=OVKDictionary(item[@"object"]); double w=[OVKString(photo[@"width"]) doubleValue], h=[OVKString(photo[@"height"]) doubleValue];
         if (w<=0 || h<=0) for (id value in OVKArray(photo[@"sizes"])) { NSDictionary *size=OVKDictionary(value); double sw=[OVKString(size[@"width"]) doubleValue],sh=[OVKString(size[@"height"]) doubleValue]; if (sw>0 && sh>0) { w=sw; h=sh; } }
@@ -110,7 +124,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 - (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
     self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
     if (self) {
-        self.avatar = [[OVKRemoteImageView alloc] init]; self.avatar.contentMode = UIViewContentModeScaleAspectFill; self.avatar.clipsToBounds = YES; self.avatar.userInteractionEnabled = YES; [self.avatar addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapAvatar)]]; self.avatar.layer.borderWidth = 1; self.avatar.layer.borderColor = [UIColor colorWithWhite:0 alpha:.2].CGColor;
+        self.avatar = [[OVKRemoteImageView alloc] init]; self.avatar.maxPixelSize=OVKLowMemoryDevice() ? 96 : 128; self.avatar.contentMode = UIViewContentModeScaleAspectFill; self.avatar.clipsToBounds = YES; self.avatar.userInteractionEnabled = YES; [self.avatar addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapAvatar)]]; self.avatar.layer.borderWidth = 1; self.avatar.layer.borderColor = [UIColor colorWithWhite:0 alpha:.2].CGColor;
         self.bubble = [[UIImageView alloc] init]; [self.contentView addSubview:self.bubble];
         self.postHeader=[[UIView alloc] init]; self.postHeader.backgroundColor=[UIColor colorWithRed:.92 green:.945 blue:.96 alpha:1]; [self.contentView addSubview:self.postHeader];
         self.postFooter=[[UIView alloc] init]; self.postFooter.backgroundColor=[UIColor colorWithRed:.96 green:.97 blue:.98 alpha:1]; [self.contentView addSubview:self.postFooter];
@@ -142,6 +156,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     CGFloat photoHeight = self.photo.hidden ? 0 : self.photoDisplayHeight;
     self.unreadBadge.hidden=!self.dialogStyle || !self.unread;
     self.bodyLabel.textColor=OVKThemeText(); self.stamp.textColor=OVKThemeSecondary(); self.heading.textColor=OVKThemeAccent();
+    self.contentView.opaque=!self.chatStyle; self.postHeader.opaque=YES; self.postFooter.opaque=YES;
     self.contentView.backgroundColor=self.chatStyle ? [UIColor clearColor] : OVKThemeSurface();
     self.postHeader.backgroundColor=OVKDarkTheme() ? [UIColor colorWithRed:.18 green:.21 blue:.25 alpha:1] : [UIColor colorWithPatternImage:[UIImage imageNamed:@"PostHeader"]];
     self.postFooter.backgroundColor=OVKDarkTheme() ? [UIColor colorWithRed:.13 green:.15 blue:.18 alpha:1] : [UIColor colorWithRed:.96 green:.97 blue:.98 alpha:1];
@@ -155,7 +170,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     self.backgroundView.hidden = self.chatStyle || OVKDarkTheme();
     if (self.dialogStyle) {
         self.backgroundView.hidden=YES; self.contentView.backgroundColor=self.unread ? (OVKDarkTheme() ? [UIColor colorWithRed:.22 green:.28 blue:.35 alpha:1] : [UIColor colorWithRed:.88 green:.91 blue:.94 alpha:1]) : OVKThemeSurface();
-        self.avatar.frame=CGRectMake(8,9,56,56); self.avatar.layer.cornerRadius=5;
+        self.avatar.frame=CGRectMake(8,9,56,56); self.avatar.layer.cornerRadius=OVKLowMemoryDevice() ? 0 : 5;
         self.heading.font=[UIFont boldSystemFontOfSize:16]; self.heading.textColor=OVKThemeText(); self.heading.frame=CGRectMake(74,8,MAX(40,width-157),22);
         self.stamp.textAlignment=NSTextAlignmentRight; self.stamp.frame=CGRectMake(width-80,10,70,18);
         self.bodyLabel.font=[UIFont systemFontOfSize:14]; self.bodyLabel.textColor=OVKThemeSecondary(); self.bodyLabel.numberOfLines=2; self.bodyLabel.frame=CGRectMake(74,33,width-(self.unread ? 119 : 84),36); self.unreadBadge.frame=CGRectMake(width-38,43,28,20);
@@ -206,6 +221,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 @property (assign, nonatomic) BOOL sending;
 @property (strong, nonatomic) NSNumber *pendingRandomID;
 @property (copy, nonatomic) NSString *pendingMessage;
+@property (strong, nonatomic) NSMutableDictionary *rowHeights;
 @property (strong, nonatomic) NSMutableSet *postRequests;
 @property (strong, nonatomic) NSDictionary *actionPost;
 @property (strong, nonatomic) NSArray *postActions;
@@ -238,7 +254,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 @implementation OVKListController
 - (id)initWithMode:(NSString *)mode identifier:(NSNumber *)identifier title:(NSString *)title {
     self = [super init];
-    if (self) { self.postRequests=[NSMutableSet set]; self.friendshipStatus=-1; self.mode = mode; self.identifier = identifier; self.title = title; self.items = [NSMutableArray array]; self.people = [NSMutableDictionary dictionary]; }
+    if (self) { self.rowHeights=[NSMutableDictionary dictionary]; self.postRequests=[NSMutableSet set]; self.friendshipStatus=-1; self.mode = mode; self.identifier = identifier; self.title = title; self.items = [NSMutableArray array]; self.people = [NSMutableDictionary dictionary]; }
     return self;
 }
 - (BOOL)isProfile { return [self.mode isEqualToString:@"profile"]; }
@@ -289,8 +305,9 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     [self.footer setBackgroundImage:[OVKThemeChrome(@"FooterButton") resizableImageWithCapInsets:UIEdgeInsetsMake(15,7,15,7)] forState:UIControlStateNormal]; [self.footer setTitleColor:OVKThemeAccent() forState:UIControlStateNormal];
 }
 - (void)themeChanged:(NSNotification *)note { [self applyTheme]; [self.tableView reloadData]; if ([self isProfile]) [self updateProfileHeader]; }
-- (void)appearanceChanged:(NSNotification *)note { if ([self isFeed]) [self.tableView reloadData]; }
-- (void)languageChanged:(NSNotification *)note {
+- (void)didReceiveMemoryWarning { [super didReceiveMemoryWarning]; [self.rowHeights removeAllObjects]; }
+- (void)appearanceChanged:(NSNotification *)note { [self.rowHeights removeAllObjects]; if ([self isFeed]) [self.tableView reloadData]; }
+- (void)languageChanged:(NSNotification *)note { [self.rowHeights removeAllObjects];
     if ([self isChat]) self.navigationItem.rightBarButtonItem.title=OVKL(@"Ранее");
     self.search.placeholder=OVKL(@"Поиск диалогов"); self.messageField.placeholder=OVKL(@"Написать сообщение"); [self.sendButton setTitle:OVKL(@"Отпр.") forState:UIControlStateNormal];
     if ([self isProfile]) { [self.profileTabs setTitle:OVKL(@"Профиль") forSegmentAtIndex:0]; [self.profileTabs setTitle:OVKL(@"Информация") forSegmentAtIndex:1]; [self updateProfileHeader]; }
@@ -329,10 +346,10 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
             if (generation!=self.generation) return;
             NSArray *raw=[result isKindOfClass:[NSArray class]] ? OVKArray(result) : OVKArray(OVKDictionary(result)[@"items"]);
             NSMutableArray *attachments=[NSMutableArray array]; if (!error) for (id photo in raw) if ([photo isKindOfClass:[NSDictionary class]]) [attachments addObject:@{@"type":@"photo",@"photo":photo}];
-            self.profilePhotos=OVKPlayableAttachments(@{@"attachments":attachments}); [self updateProfileHeader];
+            self.profilePhotos=OVKPostAttachments(@{@"attachments":attachments}); [self updateProfileHeader];
         }];
     }
-    NSMutableDictionary *params = [@{@"count":@20,@"offset":@(append ? self.items.count : 0),@"extended":@1,@"fields":@"photo_100,photo_50,online"} mutableCopy];
+    NSUInteger pageSize=OVKPageSize(); NSMutableDictionary *params = [@{@"count":@(pageSize),@"offset":@(append ? self.items.count : 0),@"extended":@1,@"fields":@"photo_100,photo_50,online"} mutableCopy];
     NSString *method = @"newsfeed.get";
     if ([self.mode isEqualToString:@"friends"]) { method = @"friends.get"; params[@"user_id"] = self.identifier ?: [OVKAPI shared].userID; }
     else if ([self.mode isEqualToString:@"dialogs"]) method = @"messages.getConversations";
@@ -348,12 +365,12 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
         if (![result isKindOfClass:[NSDictionary class]] || ![response[@"items"] isKindOfClass:[NSArray class]]) {
             self.notice.text = OVKL(@"Формат ответа этого сервера не поддерживается"); [self.footer setTitle:OVKL(@"Повторить") forState:UIControlStateNormal]; return;
         }
-        if (!append) { [self.items removeAllObjects]; [self.people removeAllObjects]; if (self.user[@"id"]) self.people[OVKString(self.user[@"id"])] = self.user; }
+        if (!append) { [self.rowHeights removeAllObjects]; [self.items removeAllObjects]; [self.people removeAllObjects]; if (self.user[@"id"]) self.people[OVKString(self.user[@"id"])] = self.user; }
         [self indexPeople:response]; NSArray *incoming = OVKArray(response[@"items"]);
         if ([self isChat]) { NSMutableArray *chronological=[NSMutableArray array]; for (id value in [incoming reverseObjectEnumerator]) if ([value isKindOfClass:[NSDictionary class]]) [chronological addObject:value]; if (append) [self.items insertObjects:chronological atIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0,chronological.count)]]; else [self.items addObjectsFromArray:chronological]; }
         else for (id value in incoming) { if ([value isKindOfClass:[NSDictionary class]]) [self.items addObject:value]; }
         self.nextCursor = OVKString(response[@"next_from"]);
-        self.more = ![OVKAPI shared].demo && (self.nextCursor.length || (incoming.count >= 20 && (!response[@"count"] || self.items.count < [response[@"count"] unsignedIntegerValue])));
+        self.more = ![OVKAPI shared].demo && (self.nextCursor.length || (incoming.count >= pageSize && (!response[@"count"] || self.items.count < [response[@"count"] unsignedIntegerValue])));
         self.notice.text = [OVKAPI shared].demo ? OVKL(@"Демонстрация • вымышленные данные") : (self.items.count ? OVKL(@"Обновлено • потяните вниз для обновления") : OVKL(@"Пока ничего нет"));
         if ([self.mode isEqualToString:@"archive"] && !self.items.count) self.notice.text=OVKL(@"Архив пуст. Здесь показываются записи, ранее перенесённые в архив OpenVK.");
         [self.footer setTitle:self.more ? OVKL(@"Показать ещё") : OVKL(@"Обновить") forState:UIControlStateNormal]; [self.tableView reloadData];
@@ -464,7 +481,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     [super viewDidLayoutSubviews]; CGFloat width=self.view.bounds.size.width,height=self.view.bounds.size.height; CGFloat contentWidth=UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad ? MIN(720,width) : width; CGFloat margin=(width-contentWidth)/2; CGFloat bar=[self isChat] ? 44 : 0;
     self.tableView.frame=CGRectMake(margin,0,contentWidth,MAX(0,height-bar-self.keyboardHeight)); self.composerBar.frame=CGRectMake(margin,MAX(0,height-bar-self.keyboardHeight),contentWidth,bar); self.messageField.frame=CGRectMake(8,1,contentWidth-83,41); self.sendButton.frame=CGRectMake(contentWidth-67,8,59,29);
     self.footer.frame=CGRectMake((contentWidth-180)/2,8,180,33);
-    self.view.backgroundColor=OVKThemeBackground(); if (fabs(self.layoutWidth-contentWidth)>.5) { self.layoutWidth=contentWidth; if ([self isProfile]) [self updateProfileHeader]; [self.tableView reloadData]; }
+    self.view.backgroundColor=OVKThemeBackground(); if (fabs(self.layoutWidth-contentWidth)>.5) { self.layoutWidth=contentWidth; [self.rowHeights removeAllObjects]; if ([self isProfile]) [self updateProfileHeader]; [self.tableView reloadData]; }
 }
 - (void)chatKeyboard:(NSNotification *)note {
     if (!self.view.window) { self.keyboardHeight=0; return; }
@@ -516,12 +533,14 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
     if ([self isProfile] && self.profileInfo) { NSArray *detail=[self profileDetails][indexPath.row]; CGSize size=[OVKString(detail[1]) sizeWithFont:[UIFont systemFontOfSize:14] constrainedToSize:CGSizeMake(tableView.bounds.size.width-110,10000) lineBreakMode:NSLineBreakByWordWrapping]; return MAX(50,ceil(size.height)+22); }
     if ([self.mode isEqualToString:@"dialogs"]) return 78;
-    NSString *text = [self bodyFor:[self postAt:indexPath.row]];
+    NSDictionary *post=[self postAt:indexPath.row]; NSNumber *row=@(indexPath.row); NSDictionary *cached=self.rowHeights[row];
+    if (cached[@"post"]==post && [cached[@"width"] doubleValue]==tableView.bounds.size.width) return [cached[@"height"] doubleValue];
+    NSString *text = [self bodyFor:post];
     CGFloat textWidth=tableView.bounds.size.width-([self isChat] ? 98 : ([self isFeed] ? 16 : 78));
     CGSize size = [text sizeWithFont:[UIFont systemFontOfSize:[self isFeed] ? OVKFeedTextSize() : 14] constrainedToSize:CGSizeMake(MAX(100,textWidth),([self isPost] || [self isChat]) ? 20000 : 110) lineBreakMode:NSLineBreakByWordWrapping];
     CGFloat imageHeight=OVKPostPhotoHeight([self postAt:indexPath.row],tableView.bounds.size.width-([self isChat] ? 92 : ([self isFeed] ? 0 : 94)),[self isFeed]);
-    if ([self isChat]) return MAX(62,ceil(size.height)+48+imageHeight);
-    return MAX(86,ceil(size.height)+([self isFeed] ? 112 : 62)) + imageHeight;
+    CGFloat height=[self isChat] ? MAX(62,ceil(size.height)+48+imageHeight) : MAX(86,ceil(size.height)+([self isFeed] ? 112 : 62))+imageHeight;
+    self.rowHeights[row]=@{@"post":post,@"width":@(tableView.bounds.size.width),@"height":@(height)}; return height;
 }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     if ([self isProfile] && self.profileInfo) { UITableViewCell *info=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue2 reuseIdentifier:nil]; NSArray *detail=[self profileDetails][indexPath.row]; info.textLabel.text=detail[0]; info.detailTextLabel.text=OVKString(detail[1]).length ? detail[1] : OVKL(@"Не указано"); info.detailTextLabel.numberOfLines=0; info.detailTextLabel.font=[UIFont systemFontOfSize:14]; info.textLabel.font=[UIFont systemFontOfSize:12]; info.selectionStyle=UITableViewCellSelectionStyleNone; OVKThemeCell(info); return info; }
@@ -530,7 +549,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     NSDictionary *item = [self postAt:indexPath.row];
     NSString *photoURL = OVKPhotoURL(item); cell.photoDisplayHeight=OVKPostPhotoHeight(item,tableView.bounds.size.width-([self isChat] ? 92 : ([self isFeed] ? 0 : 94)),[self isFeed]); cell.photo.hidden = !photoURL.length; if (photoURL.length) [cell.photo load:photoURL];
     NSArray *photos=OVKPostPhotos(item); cell.photoCount=photos.count;
-    for (NSUInteger index=0;index<cell.extraPhotos.count;index++) { OVKRemoteImageView *image=cell.extraPhotos[index]; if (index+1<photos.count) [image load:photos[index+1][@"url"]]; else [image load:@""]; }
+    for (NSUInteger index=0;index<cell.extraPhotos.count;index++) { OVKRemoteImageView *image=cell.extraPhotos[index]; if (index+1<photos.count) [image load:photos[index+1][@"preview"] ?: photos[index+1][@"url"]]; else [image load:@""]; }
     cell.morePhotos.text=photos.count>3 ? [NSString stringWithFormat:@"+%lu",(unsigned long)(photos.count-3)] : @"";
     cell.dialogStyle=[self.mode isEqualToString:@"dialogs"]; cell.unread=[OVKDictionary(item[@"conversation"])[@"unread_count"] integerValue]>0;
     cell.chatStyle = [self isChat]; cell.outgoing = [item[@"out"] boolValue] || [OVKString(item[@"from_id"]) isEqualToString:OVKString([OVKAPI shared].userID)]; cell.postStyle = [self isFeed]; cell.bodyLabel.font=[UIFont systemFontOfSize:[self isFeed] ? OVKFeedTextSize() : 14]; cell.heading.text = [self headingFor:item]; cell.bodyLabel.text = [self bodyFor:item];
@@ -540,7 +559,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     [cell.avatar load:OVKString(person[@"photo_100"] ?: person[@"photo_50"])];
     NSString *avatarURL = OVKString(person[@"photo_max_orig"] ?: person[@"photo_200"] ?: person[@"photo_100"] ?: person[@"photo_50"]);
     __weak OVKListController *weakSelf = self; cell.photoTapped=^{
-        NSMutableArray *photos=[NSMutableArray array]; for (NSDictionary *attachment in OVKPlayableAttachments(item)) if ([attachment[@"type"] isEqualToString:@"photo"]) [photos addObject:attachment];
+        NSMutableArray *photos=[NSMutableArray array]; for (NSDictionary *attachment in OVKPostAttachments(item)) if ([attachment[@"type"] isEqualToString:@"photo"]) [photos addObject:attachment];
         if (photos.count) [weakSelf.navigationController pushViewController:[[OVKPhotoController alloc] initWithPhotos:photos index:0] animated:YES];
     };
     cell.photoIndexTapped=^(NSUInteger index) { if (index<photos.count) [weakSelf.navigationController pushViewController:[[OVKPhotoController alloc] initWithPhotos:photos index:index] animated:YES]; };
@@ -551,7 +570,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     NSString *date = OVKDate(message[@"date"]); NSInteger unread = [OVKDictionary(item[@"conversation"])[@"unread_count"] integerValue];
     cell.unreadBadge.text=unread>99 ? @"99+" : [NSString stringWithFormat:@"%ld",(long)unread];
     cell.stamp.text = unread ? [NSString stringWithFormat:@"%ld новых • %@",(long)unread,date] : date;
-    if (cell.dialogStyle || cell.chatStyle) { NSDateFormatter *format=[[NSDateFormatter alloc] init]; format.locale=[[NSLocale alloc] initWithLocaleIdentifier:OVKLanguageIsEnglish() ? @"en_US" : @"ru_RU"]; format.dateFormat=cell.chatStyle ? @"HH:mm" : @"d MMM"; NSDate *day=[NSDate dateWithTimeIntervalSince1970:[message[@"date"] doubleValue]]; if (cell.dialogStyle && [[NSDate date] timeIntervalSinceDate:day]<86400) format.dateFormat=@"HH:mm"; cell.stamp.text=[message[@"date"] doubleValue]>0 ? [format stringFromDate:day] : @""; }
+    if (cell.dialogStyle || cell.chatStyle) cell.stamp.text=OVKCompactDate(message[@"date"],cell.chatStyle);
     NSString *comments=OVKString(OVKDictionary(item[@"comments"])[@"count"]); NSString *likes=OVKString(OVKDictionary(item[@"likes"])[@"count"]);
     cell.metrics.text = [NSString stringWithFormat:OVKL(@"Комментарии · %@"),comments.length ? comments : @"0"];
     cell.likes.text = likes.length ? likes : @"0";
@@ -560,7 +579,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 }
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:YES]; if ([self isProfile] && self.profileInfo) return; NSDictionary *item = [self postAt:indexPath.row];
-    if ([self isChat] || [self isPost]) { if (OVKPlayableAttachments(item).count) [self openAttachmentsForPost:item]; return; }
+    if ([self isChat] || [self isPost]) { if (OVKPostAttachments(item).count) [self openAttachmentsForPost:item]; return; }
     if ([self.mode isEqualToString:@"friends"]) {
         if (![item[@"id"] respondsToSelector:@selector(integerValue)]) return;
         [self.navigationController pushViewController:[[OVKListController alloc] initWithMode:@"profile" identifier:item[@"id"] title:OVKName(item)] animated:YES];
@@ -580,7 +599,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
         if (generation!=self.generation) return; self.loading=NO; [self finishPendingWallRefresh]; [self.refreshControl endRefreshing];
         NSArray *posts=[result isKindOfClass:[NSArray class]] ? result : OVKArray(OVKDictionary(result)[@"items"]);
         if (error) { self.notice.text=error.localizedDescription; return; }
-        if (posts.count && [posts[0] isKindOfClass:[NSDictionary class]]) { self.singlePost=posts[0]; self.items=[NSMutableArray arrayWithObject:self.singlePost]; [self indexPeople:OVKDictionary(result)]; self.notice.text=OVKL(@"Запись"); [self.tableView reloadData]; }
+        if (posts.count && [posts[0] isKindOfClass:[NSDictionary class]]) { [self.rowHeights removeAllObjects]; self.singlePost=posts[0]; self.items=[NSMutableArray arrayWithObject:self.singlePost]; [self indexPeople:OVKDictionary(result)]; self.notice.text=OVKL(@"Запись"); [self.tableView reloadData]; }
     }];
 }
 - (void)finishPendingWallRefresh {
@@ -646,7 +665,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     }];
 }
 - (void)openAttachmentsForPost:(NSDictionary *)post {
-    NSArray *items = OVKPlayableAttachments(post);
+    NSArray *items = OVKPostAttachments(post);
     if (!items.count) { if ([self isPost]) [self openPost]; return; }
     [self.navigationController pushViewController:[[OVKAttachmentsController alloc] initWithAttachments:items title:OVKL(@"Вложения")] animated:YES];
 }

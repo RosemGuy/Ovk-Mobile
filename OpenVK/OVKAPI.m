@@ -45,6 +45,7 @@ static NSError *OVKError(NSInteger code, NSString *message) {
 @property (strong, nonatomic) NSURL *origin;
 @property (copy, nonatomic) OVKCompletion completion;
 @property (assign, nonatomic) NSInteger status;
+@property (assign, atomic) NSUInteger parseGeneration;
 @property (assign, nonatomic) BOOL tokenResponse;
 @property (copy, nonatomic) NSString *mimeType;
 @property (copy, nonatomic) NSString *responseServer;
@@ -63,7 +64,7 @@ static NSError *OVKError(NSInteger code, NSString *message) {
 - (void)cancel { [self finish:nil error:OVKError(NSURLErrorCancelled,@"Вход отменён")]; }
 - (void)finish:(id)result error:(NSError *)error {
     OVKCompletion callback = self.completion;
-    self.completion = nil; [self.connection cancel]; self.connection = nil;
+    self.completion = nil; ++self.parseGeneration; self.data=nil; [self.connection cancel]; self.connection = nil;
     if (callback) callback(result,error);
 }
 - (void)connection:(NSURLConnection *)connection willSendRequestForAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge {
@@ -104,10 +105,17 @@ static NSError *OVKError(NSInteger code, NSString *message) {
     [self finish:nil error:error];
 }
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection {
-    NSError *parseError = nil;
-    id json = [NSJSONSerialization JSONObjectWithData:self.data options:0 error:&parseError];
-    NSDictionary *root = OVKDictionary(OVKCleanJSON(json));
-    if (parseError || ![json isKindOfClass:[NSDictionary class]]) {
+    NSData *payload=self.data; self.data=nil; NSUInteger generation=++self.parseGeneration;
+    static dispatch_queue_t queue; static dispatch_once_t once; dispatch_once(&once, ^{ queue=dispatch_queue_create("org.openvk.mobile.json",DISPATCH_QUEUE_SERIAL); dispatch_set_target_queue(queue,dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW,0)); });
+    dispatch_async(queue, ^{ @autoreleasepool {
+        if (generation!=self.parseGeneration) return;
+        NSError *error=nil; id json=payload ? [NSJSONSerialization JSONObjectWithData:payload options:0 error:&error] : nil;
+        BOOL valid=[json isKindOfClass:[NSDictionary class]]; NSDictionary *root=valid ? OVKDictionary(OVKCleanJSON(json)) : @{};
+        dispatch_async(dispatch_get_main_queue(), ^{ if (generation!=self.parseGeneration || !self.completion) return; [self completeJSON:root valid:valid error:error]; });
+    } });
+}
+- (void)completeJSON:(NSDictionary *)root valid:(BOOL)valid error:(NSError *)parseError {
+    if (parseError || !valid) {
         NSString *diagnostic = [NSString stringWithFormat:@"HTTP %ld: ответ не является JSON.\nАдрес: %@%@\nТип: %@; сервер: %@\nUser-Agent: %@\n%@",(long)self.status,self.origin.host ?: @"",self.origin.path ?: @"",self.mimeType ?: @"не указан",self.responseServer.length ? self.responseServer : @"не указан",[OVKAPI requestUserAgent], self.status == 403 ? @"Сервер отказал в запросе. Это не ответ API о неверном пароле." : @"Проверьте адрес API и доступ к серверу."];
         [self finish:nil error:OVKError((self.status < 200 || self.status >= 300) ? self.status : -4,diagnostic)]; return;
     }

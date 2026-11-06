@@ -1,3 +1,4 @@
+#import "OVKPerformance.h"
 #import "OVKLanguage.h"
 #import "OVKMedia.h"
 #import "OVKTrust.h"
@@ -111,7 +112,19 @@ static void OVKShowCurrentMusic(UIViewController *controller);
 static void OVKShowBundledVideo(NSString *name,UIViewController *controller);
 static void OVKRouteRemoteControl(UIEvent *event);
 static NSUInteger OVKImageCacheGeneration=0;
-static NSCache *OVKImageCache(void) { static NSCache *cache; static dispatch_once_t once; dispatch_once(&once, ^{ cache=[[NSCache alloc] init]; cache.totalCostLimit=16*1024*1024; cache.countLimit=80; }); return cache; }
+static NSCache *OVKImageCache(void) { static NSCache *cache; static dispatch_once_t once; dispatch_once(&once, ^{ cache=[[NSCache alloc] init]; cache.totalCostLimit=(OVKLowMemoryDevice() ? 4 : 16)*1024*1024; cache.countLimit=OVKLowMemoryDevice() ? 32 : 80; }); return cache; }
+static NSOperationQueue *OVKImageDecodeQueue(void) {
+    static NSOperationQueue *queue; static dispatch_once_t once; dispatch_once(&once, ^{ queue=[[NSOperationQueue alloc] init]; queue.name=@"Ovk-Mobile image decoding"; queue.maxConcurrentOperationCount=OVKLowMemoryDevice() ? 1 : 2; }); return queue;
+}
+@interface OVKImageTask : NSObject <OVKCancellable>
+@property (assign, atomic) BOOL cancelled;
+@property (strong, nonatomic) id<OVKCancellable> download;
+@property (strong, nonatomic) NSOperation *operation;
+@property (strong, nonatomic) NSURL *file;
+@end
+@implementation OVKImageTask
+- (void)cancel { self.cancelled=YES; [self.download cancel]; self.download=nil; [self.operation cancel]; self.operation=nil; if (self.file) [[NSFileManager defaultManager] removeItemAtURL:self.file error:NULL]; self.file=nil; }
+@end
 @implementation OVKMedia
 + (void)showBundledVideo:(NSString *)name from:(UIViewController *)controller { OVKShowBundledVideo(name,controller); }
 + (void)clearImageCache { ++OVKImageCacheGeneration; [OVKImageCache() removeAllObjects]; }
@@ -134,36 +147,59 @@ static NSCache *OVKImageCache(void) { static NSCache *cache; static dispatch_onc
         [task start:source];
     }); return task;
 }
-+ (id<OVKCancellable>)image:(NSString *)url completion:(void (^)(UIImage *,NSError *))completion { return [self image:url maxPixelSize:512 completion:completion]; }
++ (id<OVKCancellable>)image:(NSString *)url completion:(void (^)(UIImage *,NSError *))completion { return [self image:url maxPixelSize:OVKPreviewPixelLimit() completion:completion]; }
 + (id<OVKCancellable>)image:(NSString *)url maxPixelSize:(NSUInteger)pixels completion:(void (^)(UIImage *,NSError *))completion {
-    pixels=MAX(64,MIN(2048,pixels));
+    pixels=MAX(64,MIN(OVKFullPhotoPixelLimit(),pixels));
     NSString *source = OVKMediaURL(url);
     NSCache *cache=OVKImageCache(); NSUInteger cacheGeneration=OVKImageCacheGeneration;
     if ([source hasPrefix:@"demo:"]) { UIImage *image = [UIImage imageNamed:[source substringFromIndex:5]]; dispatch_async(dispatch_get_main_queue(), ^{ completion(image,image ? nil : MediaError(8,OVKL(@"Нет демоизображения"))); }); return nil; }
     NSString *cacheKey=[NSString stringWithFormat:@"%lu:%@",(unsigned long)pixels,source];
     UIImage *saved = [cache objectForKey:cacheKey];
     if (saved) { dispatch_async(dispatch_get_main_queue(), ^{ completion(saved,nil); }); return nil; }
-    return [self download:source limit:20*1024*1024 progress:nil completion:^(NSURL *file,NSError *error) {
+    OVKImageTask *ticket=[[OVKImageTask alloc] init];
+    ticket.download=[self download:source limit:20*1024*1024 progress:nil completion:^(NSURL *file,NSError *error) {
+        ticket.download=nil;
+        if (ticket.cancelled) { if (file) [[NSFileManager defaultManager] removeItemAtURL:file error:NULL]; return; }
         if (error) { completion(nil,error); return; }
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,0), ^{
-            CGImageSourceRef input = CGImageSourceCreateWithURL((__bridge CFURLRef)file,NULL); CGImageRef image = NULL;
-            if (input) { NSDictionary *options = @{(__bridge id)kCGImageSourceCreateThumbnailFromImageAlways:@YES,(__bridge id)kCGImageSourceThumbnailMaxPixelSize:@(pixels),(__bridge id)kCGImageSourceCreateThumbnailWithTransform:@YES}; image = CGImageSourceCreateThumbnailAtIndex(input,0,(__bridge CFDictionaryRef)options); CFRelease(input); }
-            UIImage *decoded = image ? [UIImage imageWithCGImage:image] : nil; if (image) CGImageRelease(image);
-            [[NSFileManager defaultManager] removeItemAtURL:file error:NULL];
-            dispatch_async(dispatch_get_main_queue(), ^{ if (decoded && cacheGeneration==OVKImageCacheGeneration) [cache setObject:decoded forKey:cacheKey cost:(NSUInteger)(decoded.size.width*decoded.size.height*4)]; completion(decoded,decoded ? nil : MediaError(9,OVKL(@"Не удалось прочитать изображение"))); });
-        });
+        ticket.file=file;
+        NSBlockOperation *operation=[NSBlockOperation blockOperationWithBlock:^{ @autoreleasepool {
+            if (ticket.cancelled) return;
+            NSDictionary *inputOptions=@{(__bridge id)kCGImageSourceShouldCache:@NO};
+            CGImageSourceRef input=CGImageSourceCreateWithURL((__bridge CFURLRef)file,(__bridge CFDictionaryRef)inputOptions); CGImageRef image=NULL;
+            if (input) { NSDictionary *options=@{(__bridge id)kCGImageSourceCreateThumbnailFromImageAlways:@YES,(__bridge id)kCGImageSourceThumbnailMaxPixelSize:@(pixels),(__bridge id)kCGImageSourceCreateThumbnailWithTransform:@YES,(__bridge id)kCGImageSourceShouldCache:@YES}; image=CGImageSourceCreateThumbnailAtIndex(input,0,(__bridge CFDictionaryRef)options); CFRelease(input); }
+            // Decode the small thumbnail on this worker, avoiding first-draw decompression during scrolling.
+            UIImage *decoded=nil;
+            if (image && !ticket.cancelled) {
+                size_t width=CGImageGetWidth(image),height=CGImageGetHeight(image); CGColorSpaceRef space=CGColorSpaceCreateDeviceRGB();
+                CGContextRef bitmap=CGBitmapContextCreate(NULL,width,height,8,0,space,kCGImageAlphaPremultipliedFirst|kCGBitmapByteOrder32Little); CGColorSpaceRelease(space);
+                if (bitmap) { CGContextDrawImage(bitmap,CGRectMake(0,0,width,height),image); CGImageRef ready=CGBitmapContextCreateImage(bitmap); if (ready) { decoded=[UIImage imageWithCGImage:ready]; CGImageRelease(ready); } CGContextRelease(bitmap); }
+            }
+            if (image) CGImageRelease(image); [[NSFileManager defaultManager] removeItemAtURL:file error:NULL];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                ticket.operation=nil; ticket.file=nil; if (ticket.cancelled) return;
+                if (decoded && cacheGeneration==OVKImageCacheGeneration) [cache setObject:decoded forKey:cacheKey cost:CGImageGetWidth(decoded.CGImage)*CGImageGetHeight(decoded.CGImage)*4];
+                completion(decoded,decoded ? nil : MediaError(9,OVKL(@"Не удалось прочитать изображение")));
+            });
+        } }];
+        operation.threadPriority=.25; ticket.operation=operation; [OVKImageDecodeQueue() addOperation:operation];
     }];
+    return ticket;
 }
 @end
 @interface OVKRemoteImageView ()
 @property (strong, nonatomic) id<OVKCancellable> task;
+@property (assign, nonatomic) BOOL imageReady;
+@property (assign, nonatomic) NSUInteger loadedPixelSize;
 @end
 @implementation OVKRemoteImageView
 - (void)load:(NSString *)url {
-    self.source = nil; [self.task cancel]; self.task = nil; self.source = OVKMediaURL(url); self.image = [UIImage imageNamed:@"Avatar"];
-    if (!self.source.length) return;
-    NSString *source = [self.source copy]; __weak OVKRemoteImageView *weakSelf = self;
-    self.task = [OVKMedia image:source completion:^(UIImage *image,NSError *error) { if (![weakSelf.source isEqualToString:source]) return; weakSelf.task = nil; if (image) weakSelf.image = image; }];
+    NSString *source=OVKMediaURL(url); CGFloat edge=MAX(self.bounds.size.width,self.bounds.size.height);
+    NSUInteger pixels=self.maxPixelSize ?: (edge>0 ? (NSUInteger)ceil(edge*[[UIScreen mainScreen] scale]) : OVKPreviewPixelLimit()); pixels=MAX(64,MIN(OVKPreviewPixelLimit(),pixels));
+    if ([source isEqualToString:self.source] && self.loadedPixelSize==pixels && (self.task || self.imageReady)) return;
+    self.source=nil; [self.task cancel]; self.task=nil; self.source=source; self.loadedPixelSize=pixels; self.imageReady=NO; self.image=[UIImage imageNamed:@"Avatar"];
+    if (!source.length) return;
+    __weak OVKRemoteImageView *weakSelf=self;
+    self.task=[OVKMedia image:source maxPixelSize:pixels completion:^(UIImage *image,NSError *error) { if (![weakSelf.source isEqualToString:source] || weakSelf.loadedPixelSize!=pixels) return; weakSelf.task=nil; if (image) { weakSelf.imageReady=YES; weakSelf.image=image; } }];
 }
 - (void)dealloc { [_task cancel]; }
 @end
@@ -209,7 +245,7 @@ static NSCache *OVKImageCache(void) { static NSCache *cache; static dispatch_onc
 - (void)loadPhoto {
     NSUInteger generation=++self.photoGeneration; [self.task cancel]; self.task=nil; self.scroll.zoomScale=1; self.photo.image=nil; self.status.hidden = NO; self.status.text = OVKL(@"Загрузка фотографии…");
     __weak OVKPhotoController *weakSelf = self;
-    self.task = [OVKMedia image:self.url maxPixelSize:2048 completion:^(UIImage *image,NSError *error) {
+    self.task = [OVKMedia image:self.url maxPixelSize:OVKFullPhotoPixelLimit() completion:^(UIImage *image,NSError *error) {
         OVKPhotoController *page = weakSelf; if (!page || generation!=page.photoGeneration) return; page.task = nil;
         if (!image) { page.status.text = error.localizedDescription; return; }
         page.photo.image = image; page.status.hidden = YES; page.scroll.zoomScale = 1; [page fitPhoto];
@@ -580,7 +616,7 @@ static NSCache *OVKImageCache(void) { static NSCache *cache; static dispatch_onc
     self.musicTime=[[UILabel alloc] initWithFrame:CGRectMake(20,33,width-40,18)]; self.musicTime.autoresizingMask=UIViewAutoresizingFlexibleWidth; self.musicTime.textAlignment=NSTextAlignmentCenter; self.musicTime.textColor=[UIColor lightGrayColor]; self.musicTime.backgroundColor=[UIColor clearColor]; self.musicTime.font=[UIFont systemFontOfSize:11]; [panel addSubview:self.musicTime];
     for (NSUInteger i=0;i<3;i++) { UIButton *button=[UIButton buttonWithType:UIButtonTypeCustom]; button.frame=CGRectMake(i*width/3,50,width/3,48); button.autoresizingMask=UIViewAutoresizingFlexibleLeftMargin|UIViewAutoresizingFlexibleRightMargin; [button setImage:[UIImage imageNamed:@[@"PreviousTrack",@"PauseTrack",@"NextTrack"][i]] forState:UIControlStateNormal]; button.accessibilityLabel=@[OVKL(@"Предыдущий трек"),OVKL(@"Пауза"),OVKL(@"Следующий трек")][i]; if (i==1) { self.musicPlay=button; [button addTarget:self action:@selector(toggleMusic) forControlEvents:UIControlEventTouchUpInside]; } else { button.tag=i==0 ? -1 : 1; button.enabled=i==0 ? self.queueIndex>0 : self.queueIndex+1<self.queue.count; button.alpha=button.enabled ? 1 : .3; [button addTarget:self action:@selector(changeTrack:) forControlEvents:UIControlEventTouchUpInside]; } [panel addSubview:button]; }
     MPVolumeView *volume=[[MPVolumeView alloc] initWithFrame:CGRectMake(25,107,width-50,28)]; volume.autoresizingMask=UIViewAutoresizingFlexibleWidth; volume.showsRouteButton=YES; [panel addSubview:volume];
-    self.musicTimer=[NSTimer timerWithTimeInterval:.3 target:self selector:@selector(refreshLocalAudio) userInfo:nil repeats:YES]; [[NSRunLoop mainRunLoop] addTimer:self.musicTimer forMode:NSRunLoopCommonModes];
+    self.musicTimer=[NSTimer timerWithTimeInterval:OVKLowMemoryDevice() ? .5 : .3 target:self selector:@selector(refreshLocalAudio) userInfo:nil repeats:YES]; [[NSRunLoop mainRunLoop] addTimer:self.musicTimer forMode:NSRunLoopCommonModes];
     self.navigationItem.hidesBackButton=YES;
     UIBarButtonItem *back=[[UIBarButtonItem alloc] initWithTitle:OVKL(@"Музыка") style:UIBarButtonItemStylePlain target:self action:@selector(backToMusic)];
     [back setBackgroundImage:[[UIImage imageNamed:@"MusicButton"] resizableImageWithCapInsets:UIEdgeInsetsMake(5,7,5,7)] forState:UIControlStateNormal barMetrics:UIBarMetricsDefault]; self.navigationItem.leftBarButtonItem=back;
@@ -600,7 +636,7 @@ static NSCache *OVKImageCache(void) { static NSCache *cache; static dispatch_onc
         if (self.queueIndex+1<self.queue.count) { UIButton *next=[UIButton buttonWithType:UIButtonTypeCustom]; next.tag=1; [self changeTrack:next]; return; }
         self.wantsPlayback=NO; [self pauseOutputAndReleaseSession];
     }
-    self.musicPosition=self.music.currentTime; self.musicDuration=self.music.duration; double now=self.musicPosition, total=self.musicDuration; if (!isfinite(now)) now=0; if (!isfinite(total) || total<=0) total=0;
+    self.musicPosition=self.music.currentTime; self.musicDuration=self.music.duration; if (!self.view.window) { [self updateNowPlaying]; return; } double now=self.musicPosition, total=self.musicDuration; if (!isfinite(now)) now=0; if (!isfinite(total) || total<=0) total=0;
     if (!self.musicSeek.tracking) self.musicSeek.value=total>0 ? now/total : 0;
     self.musicTime.text=[NSString stringWithFormat:@"%ld:%02ld  /  %ld:%02ld",(long)now/60,(long)now%60,(long)llround(total)/60,(long)llround(total)%60];
     [self.musicPlay setImage:[UIImage imageNamed:self.music.playing ? @"PauseTrack" : @"PlayTrack"] forState:UIControlStateNormal]; self.musicPlay.accessibilityLabel=self.music.playing ? OVKL(@"Пауза") : OVKL(@"Воспроизвести"); [self updateNowPlaying];
@@ -768,7 +804,7 @@ static void OVKRouteRemoteControl(UIEvent *event) {
 - (void)fetchLibrary:(BOOL)append {
     self.loading = YES; [self.moreButton setTitle:OVKL(@"Загрузка…") forState:UIControlStateNormal];
     NSString *method = [self.kind isEqualToString:@"photo"] ? @"photos.getAll" : ([self.kind isEqualToString:@"audio"] ? @"audio.get" : @"video.get");
-    NSDictionary *params = @{@"owner_id":self.identifier,@"count":@20,@"offset":@(append ? self.offset : 0),@"photo_sizes":@1};
+    NSUInteger pageSize=OVKPageSize(); NSDictionary *params = @{@"owner_id":self.identifier,@"count":@(pageSize),@"offset":@(append ? self.offset : 0),@"photo_sizes":@1};
     [[OVKAPI shared] call:method parameters:params completion:^(id result,NSError *error) {
         self.loading = NO; [self.refreshControl endRefreshing];
         if (error) { [self.moreButton setTitle:OVKL(@"Повторить загрузку") forState:UIControlStateNormal]; OVKAlert(OVKL(@"Не удалось загрузить раздел"),error.localizedDescription); return; }
@@ -776,7 +812,7 @@ static void OVKRouteRemoteControl(UIEvent *event) {
         NSMutableArray *raw = [NSMutableArray array]; for (id item in items) if ([item isKindOfClass:[NSDictionary class]]) [raw addObject:@{@"type":self.kind,self.kind:item}];
         NSArray *normal = OVKPlayableAttachments(@{@"attachments":raw});
         NSMutableArray *combined = append ? [self.attachments mutableCopy] : [NSMutableArray array]; [combined addObjectsFromArray:normal]; [self replaceAttachments:combined]; self.offset = append ? self.offset + items.count : items.count;
-        NSNumber *count = OVKDictionary(result)[@"count"]; self.more = ![OVKAPI shared].demo && items.count >= 20 && (!count || self.offset < [count unsignedIntegerValue]);
+        NSNumber *count = OVKDictionary(result)[@"count"]; self.more = ![OVKAPI shared].demo && items.count >= pageSize && (!count || self.offset < [count unsignedIntegerValue]);
         self.tableView.separatorStyle=[self isPhotoGrid] ? UITableViewCellSeparatorStyleNone : UITableViewCellSeparatorStyleSingleLine; self.tableView.backgroundColor=[self isPhotoGrid] ? [UIColor colorWithWhite:.12 alpha:1] : OVKThemeBackground(); [self.moreButton setTitleColor:[self isPhotoGrid] ? [UIColor lightGrayColor] : OVKBlue() forState:UIControlStateNormal];
         [self.moreButton setTitle:self.more ? OVKL(@"Показать ещё") : (self.attachments.count ? OVKL(@"Обновить") : OVKL(@"Здесь пока ничего нет — обновить")) forState:UIControlStateNormal]; [self.tableView reloadData];
     }];

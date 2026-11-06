@@ -1,3 +1,4 @@
+#import "OVKPerformance.h"
 #import "OVKLanguage.h"
 #import "OVKUI.h"
 #import "OVKAPI.h"
@@ -169,12 +170,16 @@ static UIImage *OVKMenuGlyph(void) {
     if (self.opened) { [self closeMenu]; return; }
     self.opened = YES; [self.active.view endEditing:YES];
     self.cover = [UIButton buttonWithType:UIButtonTypeCustom]; self.cover.frame = self.active.view.bounds; self.cover.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight; self.cover.backgroundColor = [UIColor colorWithWhite:0 alpha:.12]; [self.cover addTarget:self action:@selector(closeMenu) forControlEvents:UIControlEventTouchUpInside]; [self.active.view addSubview:self.cover];
-    self.active.view.layer.shadowColor = [UIColor blackColor].CGColor; self.active.view.layer.shadowOpacity = .6; self.active.view.layer.shadowRadius = 6;
+    self.active.view.layer.shadowColor = [UIColor blackColor].CGColor; self.active.view.layer.shadowOpacity = OVKLowMemoryDevice() ? 0 : .6; self.active.view.layer.shadowRadius = 6;
+    if (!OVKLowMemoryDevice()) self.active.view.layer.shadowPath=[UIBezierPath bezierPathWithRect:self.active.view.bounds].CGPath;
     [UIView animateWithDuration:.23 animations:^{ self.active.view.transform = CGAffineTransformMakeTranslation([self menuWidth],0); }];
 }
 - (void)closeMenu {
     self.opened = NO; [self.cover removeFromSuperview]; self.cover = nil;
     [UIView animateWithDuration:.2 animations:^{ self.active.view.transform = CGAffineTransformIdentity; }];
+}
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning]; for (NSString *mode in [self.sections allKeys]) if (![mode isEqualToString:self.selected] && ![mode isEqualToString:@"audio"]) [self.sections removeObjectForKey:mode];
 }
 - (void)dealloc { [[NSNotificationCenter defaultCenter] removeObserver:self]; }
 @end

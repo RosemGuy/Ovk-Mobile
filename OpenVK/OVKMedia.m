@@ -220,6 +220,12 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
 @property (strong, nonatomic) UIToolbar *photoToolbar;
 @property (strong, nonatomic) UIBarButtonItem *previousPhoto;
 @property (strong, nonatomic) UIBarButtonItem *nextPhoto;
+@property (strong, nonatomic) UIToolbar *photoTopBar;
+@property (strong, nonatomic) UIBarButtonItem *photoCounter;
+@property (strong, nonatomic) UIActivityIndicatorView *photoSpinner;
+@property (assign, nonatomic) BOOL photoControlsHidden;
+@property (assign, nonatomic) BOOL photoNavigationWasHidden;
+@property (assign, nonatomic) BOOL photoStatusWasHidden;
 @end
 @implementation OVKPhotoController
 - (id)initWithURL:(NSString *)url title:(NSString *)title { self = [super initWithNibName:nil bundle:nil]; if (self) { self.url = url; self.title = title; } return self; }
@@ -232,9 +238,14 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     [super viewDidLoad]; OVKConfigureEdges(self);
     self.view.backgroundColor = [UIColor blackColor]; self.scroll = [[UIScrollView alloc] initWithFrame:self.view.bounds]; self.scroll.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight; self.scroll.delegate = self; self.scroll.maximumZoomScale = 4; self.scroll.bouncesZoom=YES; self.scroll.showsHorizontalScrollIndicator=NO; self.scroll.showsVerticalScrollIndicator=NO; [self.view addSubview:self.scroll];
     self.photo = [[UIImageView alloc] initWithFrame:self.scroll.bounds]; self.photo.contentMode = UIViewContentModeScaleAspectFit; [self.scroll addSubview:self.photo]; UITapGestureRecognizer *doubleTap=[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(zoomPhoto:)]; doubleTap.numberOfTapsRequired=2; [self.scroll addGestureRecognizer:doubleTap];
+    UITapGestureRecognizer *singleTap=[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(togglePhotoControls)]; [singleTap requireGestureRecognizerToFail:doubleTap]; [self.scroll addGestureRecognizer:singleTap];
+    self.photoSpinner=[[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhite]; self.photoSpinner.hidesWhenStopped=YES; [self.view addSubview:self.photoSpinner];
+    self.photoTopBar=[[UIToolbar alloc] init]; self.photoTopBar.barStyle=UIBarStyleBlack; self.photoTopBar.translucent=YES; [self.view addSubview:self.photoTopBar];
+    UIBarButtonItem *done=[[UIBarButtonItem alloc] initWithTitle:OVKL(@"Готово") style:UIBarButtonItemStyleDone target:self action:@selector(closePhoto)];
+    UIBarButtonItem *flex=[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil]; self.photoCounter=[[UIBarButtonItem alloc] initWithTitle:self.title style:UIBarButtonItemStylePlain target:nil action:nil]; self.photoCounter.enabled=NO; self.photoTopBar.items=@[done,flex,self.photoCounter];
     self.status = [[UILabel alloc] initWithFrame:CGRectMake(10,15,self.view.bounds.size.width-20,60)]; self.status.autoresizingMask = UIViewAutoresizingFlexibleWidth; self.status.backgroundColor = [UIColor clearColor]; self.status.textColor = [UIColor whiteColor]; self.status.textAlignment = NSTextAlignmentCenter; self.status.font = [UIFont systemFontOfSize:13]; self.status.numberOfLines = 3; self.status.text = OVKL(@"Загрузка фотографии…"); [self.view addSubview:self.status];
     if (self.photos.count>1) {
-        self.photoToolbar=[[UIToolbar alloc] init]; self.photoToolbar.barStyle=UIBarStyleBlack; self.photoToolbar.translucent=NO; [self.view addSubview:self.photoToolbar];
+        self.photoToolbar=[[UIToolbar alloc] init]; self.photoToolbar.barStyle=UIBarStyleBlack; self.photoToolbar.translucent=YES; [self.view addSubview:self.photoToolbar];
         self.previousPhoto=[[UIBarButtonItem alloc] initWithTitle:OVKL(@"Назад") style:UIBarButtonItemStylePlain target:self action:@selector(previousPicture)];
         self.nextPhoto=[[UIBarButtonItem alloc] initWithTitle:OVKL(@"Вперёд") style:UIBarButtonItemStylePlain target:self action:@selector(nextPicture)];
         UIBarButtonItem *space=[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil]; self.photoToolbar.items=@[self.previousPhoto,space,self.nextPhoto];
@@ -245,14 +256,18 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     [self updatePhotoControls];
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRefresh target:self action:@selector(loadPhoto)]; [self loadPhoto];
 }
-- (void)viewWillAppear:(BOOL)animated { [super viewWillAppear:animated]; [self.navigationController.navigationBar setBackgroundImage:[UIImage imageNamed:@"MusicNavigation"] forBarMetrics:UIBarMetricsDefault]; self.navigationController.navigationBar.barStyle=UIBarStyleBlack; }
-- (void)viewWillDisappear:(BOOL)animated { [super viewWillDisappear:animated]; self.navigationController.navigationBar.barStyle=UIBarStyleDefault; OVKStyleNavigation(self.navigationController); }
+- (void)viewWillAppear:(BOOL)animated { [super viewWillAppear:animated]; self.photoNavigationWasHidden=self.navigationController.navigationBarHidden; self.photoStatusWasHidden=[UIApplication sharedApplication].statusBarHidden; [self.navigationController setNavigationBarHidden:YES animated:animated]; [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationNone]; }
+- (BOOL)prefersStatusBarHidden { return YES; }
+- (void)viewWillDisappear:(BOOL)animated { [super viewWillDisappear:animated]; [self.navigationController setNavigationBarHidden:self.photoNavigationWasHidden animated:animated]; [[UIApplication sharedApplication] setStatusBarHidden:self.photoStatusWasHidden withAnimation:UIStatusBarAnimationNone]; }
+- (void)closePhoto { ++self.photoGeneration; [self.task cancel]; self.task=nil; if (self.navigationController.presentingViewController) [self.navigationController dismissViewControllerAnimated:YES completion:nil]; else [self.navigationController popViewControllerAnimated:YES]; }
+- (void)togglePhotoControls { self.photoControlsHidden=!self.photoControlsHidden; self.photoTopBar.hidden=self.photoControlsHidden; self.photoToolbar.hidden=self.photoControlsHidden; }
 - (void)loadPhoto {
-    NSUInteger generation=++self.photoGeneration; [self.task cancel]; self.task=nil; self.scroll.zoomScale=1; self.photo.image=nil; self.status.hidden = NO; self.status.text = OVKL(@"Загрузка фотографии…");
+    NSUInteger generation=++self.photoGeneration; [self.task cancel]; self.task=nil; self.scroll.zoomScale=1; self.photo.image=nil; self.status.hidden=YES; [self.photoSpinner startAnimating];
     __weak OVKPhotoController *weakSelf = self;
     self.task = [OVKMedia image:self.url maxPixelSize:OVKFullPhotoPixelLimit() completion:^(UIImage *image,NSError *error) {
         OVKPhotoController *page = weakSelf; if (!page || generation!=page.photoGeneration) return; page.task = nil;
-        if (!image) { page.status.text = error.localizedDescription; return; }
+        [page.photoSpinner stopAnimating];
+        if (!image) { page.status.hidden=NO; page.status.text=error.localizedDescription; return; }
         page.photo.image = image; page.status.hidden = YES; page.scroll.zoomScale = 1; [page fitPhoto];
     }];
 }
@@ -273,6 +288,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
 }
 - (void)updatePhotoControls {
     if (self.photos.count>1) self.title=[NSString stringWithFormat:OVKL(@"%lu из %lu"),(unsigned long)(self.photoIndex+1),(unsigned long)self.photos.count];
+    self.photoCounter.title=self.title;
     self.previousPhoto.enabled=self.photoIndex>0; self.nextPhoto.enabled=self.photoIndex+1<self.photos.count;
 }
 - (void)showPicture:(NSUInteger)index { if (index>=self.photos.count || index==self.photoIndex) return; self.photoIndex=index; self.url=OVKString(OVKDictionary(self.photos[index])[@"url"]); [self updatePhotoControls]; [self loadPhoto]; }
@@ -280,11 +296,16 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
 - (void)nextPicture { [self showPicture:self.photoIndex+1]; }
 - (void)swipePicture:(UISwipeGestureRecognizer *)swipe { if (self.scroll.zoomScale>1.01) return; if (swipe.direction==UISwipeGestureRecognizerDirectionLeft) [self nextPicture]; else [self previousPicture]; }
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gesture { return self.scroll.zoomScale<=1.01; }
-- (void)viewDidLayoutSubviews { [super viewDidLayoutSubviews]; CGFloat toolbar=self.photos.count>1 ? 44 : 0; CGSize size=self.view.bounds.size; self.scroll.frame=CGRectMake(0,0,size.width,size.height-toolbar); self.photoToolbar.frame=CGRectMake(0,size.height-toolbar,size.width,toolbar); [self fitPhoto]; }
+- (void)viewDidLayoutSubviews { [super viewDidLayoutSubviews]; CGFloat toolbar=self.photos.count>1 ? 44 : 0; CGSize size=self.view.bounds.size; self.scroll.frame=CGRectMake(0,0,size.width,size.height); self.photoTopBar.frame=CGRectMake(0,0,size.width,44); self.photoSpinner.center=CGPointMake(size.width/2,size.height/2); self.status.frame=CGRectMake(20,size.height/2+20,size.width-40,60); self.photoToolbar.frame=CGRectMake(0,size.height-toolbar,size.width,toolbar); [self fitPhoto]; }
 - (void)viewDidDisappear:(BOOL)animated { [super viewDidDisappear:animated]; if ([self isMovingFromParentViewController] || !self.parentViewController) { ++self.photoGeneration; [self.task cancel]; self.task=nil; } }
 - (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView { return self.photo; }
 - (void)dealloc { [_task cancel]; _scroll.delegate = nil; }
 @end
+void OVKPresentPhoto(UIViewController *presenter, OVKPhotoController *photo) {
+    UINavigationController *navigation=[[UINavigationController alloc] initWithRootViewController:photo];
+    navigation.modalPresentationStyle=UIModalPresentationFullScreen;
+    [presenter presentViewController:navigation animated:YES completion:nil];
+}
 @interface OVKPlaybackController : UIViewController <UIAlertViewDelegate,UITableViewDataSource,UITableViewDelegate>
 @property (strong, nonatomic) NSDictionary *item;
 @property (strong, nonatomic) id<OVKCancellable> task;
@@ -299,6 +320,9 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
 @property (strong, nonatomic) AVAssetExportSession *exporter;
 @property (assign, nonatomic) BOOL mergingSound;
 @property (assign, nonatomic) BOOL containerHasAudio;
+@property (assign, nonatomic) BOOL enteringVideoFullscreen;
+@property (assign, nonatomic) BOOL playbackNavigationWasHidden;
+@property (strong, nonatomic) UIButton *videoClose;
 @property (strong, nonatomic) OVKLocalAudio *music;
 @property (assign, nonatomic) BOOL musicPrepared;
 @property (strong, nonatomic) UIView *musicView;
@@ -345,10 +369,10 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
 @end
 @implementation OVKPlaybackController
 - (void)viewDidLoad {
-    [super viewDidLoad]; self.audioTask=UIBackgroundTaskInvalid; self.title = OVKString(self.item[@"title"]);
+    [super viewDidLoad]; self.playbackNavigationWasHidden=self.navigationController.navigationBarHidden; self.audioTask=UIBackgroundTaskInvalid; self.title = OVKString(self.item[@"title"]);
     OVKConfigureEdges(self);
-    self.view.backgroundColor = [UIColor colorWithPatternImage:[UIImage imageNamed:@"Linen"]];
-    self.status = [[UILabel alloc] initWithFrame:CGRectMake(20,24,self.view.bounds.size.width-40,100)]; self.status.autoresizingMask = UIViewAutoresizingFlexibleWidth; self.status.backgroundColor = [UIColor clearColor]; self.status.textColor = OVKBlue(); self.status.font = [UIFont boldSystemFontOfSize:16]; self.status.textAlignment = NSTextAlignmentCenter; self.status.numberOfLines = 4; self.status.text = self.title; [self.view addSubview:self.status];
+    self.view.backgroundColor=[UIColor blackColor];
+    self.status = [[UILabel alloc] initWithFrame:CGRectMake(20,24,self.view.bounds.size.width-40,100)]; self.status.autoresizingMask = UIViewAutoresizingFlexibleWidth; self.status.backgroundColor = [UIColor clearColor]; self.status.textColor=[UIColor whiteColor]; self.status.font = [UIFont boldSystemFontOfSize:16]; self.status.textAlignment = NSTextAlignmentCenter; self.status.numberOfLines = 4; self.status.text = self.title; [self.view addSubview:self.status];
     self.progress = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleBar]; self.progress.frame = CGRectMake(30,144,self.view.bounds.size.width-60,12); self.progress.autoresizingMask = UIViewAutoresizingFlexibleWidth; [self.view addSubview:self.progress];
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRefresh target:self action:@selector(resolveAndLoad)];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(movieEnded:) name:MPMoviePlayerPlaybackDidFinishNotification object:nil];
@@ -361,14 +385,20 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(accountLoggedOut:) name:@"OVKSessionChanged" object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(accountLoggedOut:) name:@"OVKLogout" object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(experimentalChanged:) name:@"OVKExperimentalChanged" object:nil];
+    self.status.hidden=YES; self.progress.hidden=YES; self.spinner.activityIndicatorViewStyle=UIActivityIndicatorViewStyleWhite;
+    if ([self.item[@"type"] isEqualToString:@"video"]) {
+        self.videoClose=[UIButton buttonWithType:UIButtonTypeCustom]; self.videoClose.frame=CGRectMake(8,8,80,44); [self.videoClose setTitle:OVKL(@"Готово") forState:UIControlStateNormal]; self.videoClose.titleLabel.font=[UIFont boldSystemFontOfSize:15]; [self.videoClose addTarget:self action:@selector(backToMusic) forControlEvents:UIControlEventTouchUpInside]; [self.view addSubview:self.videoClose];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(videoExitedFullscreen:) name:MPMoviePlayerDidExitFullscreenNotification object:nil];
+    }
     [self resolveAndLoad];
 }
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
+    if ([self.item[@"type"] isEqualToString:@"video"]) [self.navigationController setNavigationBarHidden:YES animated:animated];
     if (![self.item[@"type"] isEqualToString:@"video"]) { [self.navigationController.navigationBar setBackgroundImage:[UIImage imageNamed:@"MusicNavigation"] forBarMetrics:UIBarMetricsDefault]; self.navigationController.navigationBar.barStyle=UIBarStyleBlack; }
 }
 - (void)viewDidAppear:(BOOL)animated { [super viewDidAppear:animated]; if (![self.item[@"type"] isEqualToString:@"video"]) { UIResponder *responder=(UIResponder *)[UIApplication sharedApplication].delegate; [responder becomeFirstResponder]; } }
-- (void)viewWillDisappear:(BOOL)animated { [super viewWillDisappear:animated]; if ([self.item[@"type"] isEqualToString:@"video"]) [self stop]; self.navigationController.navigationBar.barStyle=UIBarStyleDefault; OVKStyleNavigation(self.navigationController); }
+- (void)viewWillDisappear:(BOOL)animated { [super viewWillDisappear:animated]; if ([self.item[@"type"] isEqualToString:@"video"]) { if (!self.enteringVideoFullscreen && !self.movie.fullscreen) [self stop]; if (!self.enteringVideoFullscreen && !self.movie.fullscreen) [self.navigationController setNavigationBarHidden:self.playbackNavigationWasHidden animated:animated]; } self.navigationController.navigationBar.barStyle=UIBarStyleDefault; OVKStyleNavigation(self.navigationController); }
 - (void)beginAudioTask {
     if (self.audioTask!=UIBackgroundTaskInvalid || [self.item[@"type"] isEqualToString:@"video"]) return;
     __weak OVKPlaybackController *weakSelf=self;
@@ -395,13 +425,15 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     return @"";
 }
 - (void)unavailable:(NSString *)message {
-    self.progress.hidden = YES; [self.spinner stopAnimating]; self.status.text = message;
+    [self failPlayback:message];
     if ([self externalURL].length) [[[UIAlertView alloc] initWithTitle:OVKL(@"Нет прямого медиафайла") message:message delegate:self cancelButtonTitle:OVKL(@"Закрыть") otherButtonTitles:OVKL(@"Открыть в Safari"),nil] show];
 }
 - (void)alertView:(UIAlertView *)alert clickedButtonAtIndex:(NSInteger)index { if (alert.tag==281) { if (index==1) [self saveVideoForInspection]; return; } if (index == 1) [[UIApplication sharedApplication] openURL:[NSURL URLWithString:[self externalURL]]]; }
 - (void)resolveAndLoad {
     if (self.task || self.movie || self.music || self.asset || self.resolving) return; self.stopped = NO; [self beginAudioTask]; self.progress.hidden = NO; self.status.text = OVKL(@"Получаем адрес медиафайла…"); [self.spinner startAnimating];
     BOOL isVideo=[self.item[@"type"] isEqualToString:@"video"];
+    if (!isVideo && !self.musicView) [self buildMusicPlayer];
+    self.status.hidden=YES; self.progress.hidden=YES; [self.view bringSubviewToFront:self.spinner];
     self.diagnostics=[NSMutableArray array];
     NSString *local=OVKString(self.item[@"local_path"]);
     if (local.length) {
@@ -444,7 +476,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
         OVKPlaybackController *page = weakSelf;
         if (!page || page.stopped) { if (file) [[NSFileManager defaultManager] removeItemAtURL:file error:NULL]; return; }
         page.task = nil; page.progress.hidden = YES; [page.spinner stopAnimating];
-        if (error) { if (error.code != NSURLErrorCancelled) { if ([page.item[@"type"] isEqualToString:@"video"]) [page rejectVideo:error.localizedDescription]; else page.status.text=error.localizedDescription; } return; }
+        if (error) { if (error.code != NSURLErrorCancelled) { if ([page.item[@"type"] isEqualToString:@"video"]) [page rejectVideo:error.localizedDescription]; else [page failPlayback:error.localizedDescription]; } return; }
         NSFileHandle *input=[NSFileHandle fileHandleForReadingAtPath:file.path]; NSData *header=[input readDataOfLength:64]; [input closeFile];
         const char *detected=OVKMediaContainer(header.bytes,header.length);
         NSString *container=detected ? [NSString stringWithUTF8String:detected] : @"unknown";
@@ -453,14 +485,14 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
         NSString *suffix=detected ? container : ([@[@"mp3",@"m4a",@"mp4",@"aac",@"wav",@"caf",@"aif",@"aiff",@"mov"] containsObject:extension] ? extension : @"bin");
         if ([container isEqualToString:@"mp4"] && ![page.item[@"type"] isEqualToString:@"video"]) suffix=@"m4a";
         NSURL *named = [NSURL fileURLWithPath:[file.path stringByAppendingPathExtension:suffix]];
-        if (![[NSFileManager defaultManager] moveItemAtURL:file toURL:named error:&error]) { [[NSFileManager defaultManager] removeItemAtURL:file error:NULL]; page.status.text = error.localizedDescription; return; }
+        if (![[NSFileManager defaultManager] moveItemAtURL:file toURL:named error:&error]) { [[NSFileManager defaultManager] removeItemAtURL:file error:NULL]; [page failPlayback:error.localizedDescription]; return; }
         [page clearPlaybackFile];
         page.localFile = named; page.temporaryFile=YES;
         if (![page.item[@"type"] isEqualToString:@"video"]) [[NSFileManager defaultManager] setAttributes:@{NSFileProtectionKey:NSFileProtectionCompleteUntilFirstUserAuthentication} ofItemAtPath:named.path error:NULL]; [page beginPlayback];
     }];
 }
 - (void)beginPlayback {
-    self.status.hidden=NO; self.status.text = OVKL(@"Подготовка записи…"); [self.spinner startAnimating];
+    self.status.hidden=YES; self.status.text = OVKL(@"Подготовка записи…"); [self.spinner startAnimating];
     NSUInteger generation=++self.playbackGeneration;
     self.prepareDeadline=[NSTimer timerWithTimeInterval:25 target:self selector:@selector(prepareTimedOut) userInfo:nil repeats:NO]; [[NSRunLoop mainRunLoop] addTimer:self.prepareDeadline forMode:NSRunLoopCommonModes];
     if (![self.item[@"type"] isEqualToString:@"video"]) { [self prepareLocalAudio]; return; }
@@ -575,7 +607,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
         if (page.music) { [page playReadyAudio]; return; }
         page.started=YES; [page.prepareDeadline invalidate]; page.prepareDeadline=nil; [page.spinner stopAnimating]; page.status.hidden=YES; page.navigationItem.rightBarButtonItems=@[[[UIBarButtonItem alloc] initWithTitle:OVKL(@"Сведения") style:UIBarButtonItemStylePlain target:page action:@selector(showVideoInfo)]];
         [page.diagnostics addObject:@"Команда play"];
-        [page.movie play];
+        page.enteringVideoFullscreen=YES; [page.movie setFullscreen:YES animated:YES]; page.enteringVideoFullscreen=NO; [page.movie play];
     });
 }
 - (void)pauseOutputAndReleaseSession {
@@ -598,7 +630,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
 }
 - (void)fetchVideoSound {
     [self.prepareDeadline invalidate]; self.prepareDeadline=nil;
-    self.status.hidden=NO; self.status.text=OVKL(@"Загрузка звуковой дорожки…"); self.progress.hidden=NO;
+    self.status.hidden=YES; self.status.text=OVKL(@"Загрузка звуковой дорожки…"); self.progress.hidden=YES;
     NSString *url=OVKVideoAudioURL(OVKDictionary(self.item[@"object"])); NSUInteger generation=self.playbackGeneration;
     __weak OVKPlaybackController *weakSelf=self;
     self.task=[OVKMedia download:url limit:64ULL*1024*1024 progress:^(float value) { weakSelf.progress.progress=MAX(0,value); } completion:^(NSURL *file,NSError *error) {
@@ -614,7 +646,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
 }
 - (void)prepareVideoSoundFile:(NSURL *)file {
     self.soundFile=file; self.soundAsset=[AVURLAsset URLAssetWithURL:file options:nil];
-    self.status.hidden=NO; self.status.text=OVKL(@"Соединяем видео и звук…");
+    self.status.hidden=YES; self.status.text=OVKL(@"Соединяем видео и звук…");
     [self.prepareDeadline invalidate]; self.prepareDeadline=[NSTimer timerWithTimeInterval:40 target:self selector:@selector(prepareTimedOut) userInfo:nil repeats:NO]; [[NSRunLoop mainRunLoop] addTimer:self.prepareDeadline forMode:NSRunLoopCommonModes];
     NSUInteger generation=self.playbackGeneration; __weak OVKPlaybackController *weakSelf=self;
     [self.soundAsset loadValuesAsynchronouslyForKeys:@[@"tracks",@"duration"] completionHandler:^{ dispatch_async(dispatch_get_main_queue(), ^{
@@ -636,7 +668,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     [self.prepareDeadline invalidate]; self.prepareDeadline=[NSTimer timerWithTimeInterval:convert ? 180 : 40 target:self selector:@selector(prepareTimedOut) userInfo:nil repeats:NO]; [[NSRunLoop mainRunLoop] addTimer:self.prepareDeadline forMode:NSRunLoopCommonModes];
     NSURL *joined=[NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"ovk-joined-%@.%@",[[NSProcessInfo processInfo] globallyUniqueString],convert ? @"mp4" : @"mov"]]];
     self.exporter.outputURL=joined; self.exporter.outputFileType=type;
-    self.status.hidden=NO; self.status.text=OVKL(convert ? @"Подготовка совместимого видео и звука…" : @"Соединяем видео и звук…");
+    self.status.hidden=YES; self.status.text=OVKL(convert ? @"Подготовка совместимого видео и звука…" : @"Соединяем видео и звук…");
     [self.diagnostics addObject:convert ? @"Преобразование системным декодером в MP4/H.264/AAC" : @"Пересборка контейнера с явной звуковой дорожкой"];
     AVAssetExportSession *session=self.exporter; NSUInteger generation=self.playbackGeneration;
     __weak OVKPlaybackController *weakSelf=self;
@@ -670,6 +702,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     self.navigationItem.rightBarButtonItem=queue;
 }
 - (void)buildMusicPlayer {
+    if (self.musicView) { [self updateMusicModes]; [self musicReady]; return; }
     if (!self.queue.count) { self.queue=@[self.item]; self.queueIndex=0; }
     self.musicView=[[UIView alloc] initWithFrame:self.view.bounds]; self.musicView.autoresizingMask=UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight; self.musicView.backgroundColor=[UIColor blackColor]; [self.view addSubview:self.musicView];
     self.musicTimeline=[[UIImageView alloc] initWithImage:[[UIImage imageNamed:@"MusicPanel"] resizableImageWithCapInsets:UIEdgeInsetsMake(3,3,3,3)]]; self.musicTimeline.userInteractionEnabled=YES; [self.musicView addSubview:self.musicTimeline];
@@ -697,7 +730,9 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     [self configureMusicNavigation]; [self updateMusicModes]; [self.view setNeedsLayout]; [self musicReady];
 }
 - (void)viewDidLayoutSubviews {
-    [super viewDidLayoutSubviews]; if (!self.musicView) return;
+    [super viewDidLayoutSubviews];
+    self.spinner.center=CGPointMake(self.view.bounds.size.width/2,self.view.bounds.size.height/2);
+    if (!self.musicView) return;
     CGFloat width=self.view.bounds.size.width,height=self.view.bounds.size.height; BOOL pad=UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad;
     OVKMusicLayout layout=OVKMusicPlayerLayout(width,height,pad,self.musicQueueVisible);
     self.musicView.frame=self.view.bounds;
@@ -718,7 +753,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     NSDictionary *item=OVKDictionary(self.queue[path.row]),*object=OVKDictionary(item[@"object"]); cell.textLabel.text=OVKString(object[@"title"]).length ? OVKString(object[@"title"]) : OVKString(item[@"title"]); cell.textLabel.font=[UIFont systemFontOfSize:15]; cell.textLabel.textColor=path.row==self.queueIndex ? [UIColor colorWithRed:.4 green:.7 blue:1 alpha:1] : [UIColor whiteColor]; cell.detailTextLabel.text=OVKString(OVKDictionary(item[@"object"])[@"artist"]); cell.detailTextLabel.textColor=[UIColor lightGrayColor]; cell.backgroundColor=[UIColor colorWithWhite:path.row==self.queueIndex ? .23 : .16 alpha:1]; cell.contentView.backgroundColor=cell.backgroundColor; cell.accessoryType=UITableViewCellAccessoryNone; cell.indentationWidth=16; cell.indentationLevel=2;
     UILabel *number=(UILabel *)[cell.contentView viewWithTag:3201]; if (!number) { number=[[UILabel alloc] initWithFrame:CGRectMake(5,0,30,48)]; number.tag=3201; number.backgroundColor=[UIColor clearColor]; number.textAlignment=NSTextAlignmentCenter; number.font=[UIFont boldSystemFontOfSize:14]; [cell.contentView addSubview:number]; } number.text=path.row==self.queueIndex ? (self.music.playing ? @"▶" : @"II") : [NSString stringWithFormat:@"%ld",(long)path.row+1]; number.textColor=cell.textLabel.textColor; return cell;
 }
-- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)path { [tableView deselectRowAtIndexPath:path animated:YES]; if ((NSUInteger)path.row!=self.queueIndex) [self playQueueIndex:path.row]; }
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)path { [tableView deselectRowAtIndexPath:path animated:YES]; if (self.musicPrepared && (NSUInteger)path.row!=self.queueIndex) [self playQueueIndex:path.row]; }
 - (void)toggleRepeat { self.repeatMode=(self.repeatMode+1)%3; [self updateMusicModes]; }
 - (void)toggleShuffle { self.shuffleEnabled=!self.shuffleEnabled; self.playOrder=nil; [self updateMusicModes]; }
 - (NSArray *)orderedQueue {
@@ -730,9 +765,10 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     long next=OVKMusicNextPosition(self.queue.count,position,(int)direction,(int)self.repeatMode,automatic); if (next<0) return -1; return order ? [order[next] integerValue] : next;
 }
 - (void)updateMusicModes {
+    self.musicPlay.enabled=self.musicPrepared; self.musicSeek.enabled=self.musicPrepared;
     [self.musicRepeat setImage:[UIImage imageNamed:self.repeatMode ? @"MusicRepeatActive" : @"MusicRepeat"] forState:UIControlStateNormal]; self.musicRepeatOne.hidden=self.repeatMode!=2; self.musicRepeat.accessibilityLabel=OVKL(@"Повтор"); self.musicRepeat.accessibilityValue=@[OVKL(@"Выключен"),OVKL(@"Вся очередь"),OVKL(@"Один трек")][self.repeatMode];
     [self.musicShuffle setImage:[UIImage imageNamed:self.shuffleEnabled ? @"MusicShuffleActive" : @"MusicShuffle"] forState:UIControlStateNormal]; self.musicShuffle.accessibilityLabel=OVKL(@"Перемешать"); self.musicShuffle.accessibilityValue=self.shuffleEnabled ? OVKL(@"Включено") : OVKL(@"Выключен");
-    if (self.musicButtons.count==3) { UIButton *previous=self.musicButtons[0],*next=self.musicButtons[2]; previous.enabled=self.musicPosition>3 || [self nextMusicIndex:-1 automatic:NO]>=0; next.enabled=[self nextMusicIndex:1 automatic:NO]>=0; previous.alpha=previous.enabled ? 1 : .3; next.alpha=next.enabled ? 1 : .3; }
+    if (self.musicButtons.count==3) { UIButton *previous=self.musicButtons[0],*next=self.musicButtons[2]; previous.enabled=self.musicPrepared && (self.musicPosition>3 || [self nextMusicIndex:-1 automatic:NO]>=0); next.enabled=self.musicPrepared && [self nextMusicIndex:1 automatic:NO]>=0; previous.alpha=previous.enabled ? 1 : .3; next.alpha=next.enabled ? 1 : .3; }
 }
 - (void)playQueueIndex:(NSInteger)index {
     if (index<0 || index>=(NSInteger)self.queue.count) return;
@@ -742,6 +778,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
 - (void)refreshLocalAudio { [self.music refresh]; }
 - (void)musicReady { if (!self.stopped && self.music && self.musicPrepared && !self.started) [self startPreparedPlayback]; }
 - (void)toggleMusic {
+    if (!self.musicPrepared) return;
     if (self.music.playing || self.activationPending) { self.wantsPlayback=NO; self.started=NO; [self pauseOutputAndReleaseSession]; }
     else { if (self.musicDuration>0 && self.musicPosition>=self.musicDuration-.05) [self.music seek:0]; self.started=NO; [self startPreparedPlayback]; }
     [self updateMusic];
@@ -780,6 +817,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     if (OVKCurrentMusic==self) { MPNowPlayingInfoCenter *center=[MPNowPlayingInfoCenter defaultCenter]; center.nowPlayingInfo=nil; }
 }
 - (void)failPlayback:(NSString *)message {
+    if ([self.item[@"type"] isEqualToString:@"video"]) [self.navigationController setNavigationBarHidden:NO animated:NO];
     [self releasePlayer]; [self.spinner stopAnimating]; self.progress.hidden=YES; self.status.hidden=NO; self.status.text=message;
     self.navigationItem.rightBarButtonItem=[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRefresh target:self action:@selector(resolveAndLoad)];
     if ([self.item[@"type"] isEqualToString:@"video"]) self.navigationItem.rightBarButtonItems=@[self.navigationItem.rightBarButtonItem,[[UIBarButtonItem alloc] initWithTitle:OVKL(@"Сведения") style:UIBarButtonItemStylePlain target:self action:@selector(showVideoInfo)]];
@@ -815,11 +853,16 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     [[self.diagnostics componentsJoinedByString:@"\n"] writeToFile:[path stringByAppendingString:@".txt"] atomically:YES encoding:NSUTF8StringEncoding error:NULL];
     OVKAlert(OVKL(@"Файл сохранён"),path);
 }
+- (void)videoExitedFullscreen:(NSNotification *)note {
+    if (note.object!=self.movie || self.stopped) return;
+    [self stop]; [self.navigationController setNavigationBarHidden:self.playbackNavigationWasHidden animated:NO];
+    if (self.navigationController.topViewController==self) [self.navigationController popViewControllerAnimated:NO];
+}
 - (void)movieEnded:(NSNotification *)note {
     if (![NSThread isMainThread]) { __weak OVKPlaybackController *weakSelf=self; dispatch_async(dispatch_get_main_queue(), ^{ [weakSelf movieEnded:note]; }); return; }
     if (note.object!=self.movie || self.stopped) return;
     NSInteger reason=[note.userInfo[MPMoviePlayerPlaybackDidFinishReasonUserInfoKey] integerValue];
-    if (reason==MPMovieFinishReasonUserExited) { [self.navigationController popViewControllerAnimated:YES]; return; }
+    if (reason==MPMovieFinishReasonUserExited) { [self stop]; [self.navigationController setNavigationBarHidden:self.playbackNavigationWasHidden animated:NO]; if (self.navigationController.topViewController==self) [self.navigationController popViewControllerAnimated:NO]; return; }
     if (reason==MPMovieFinishReasonPlaybackError) {
         NSError *error=note.userInfo[@"error"]; NSString *message=error.localizedDescription ?: OVKL(@"iOS не смогла воспроизвести этот вариант записи.");
         if (self.candidateIndex<self.videoURLs.count) [self rejectVideo:message]; else [self failPlayback:message];
@@ -876,7 +919,7 @@ static void OVKRouteRemoteControl(UIEvent *event) {
 - (BOOL)isPhotoGrid { if (!self.attachments.count) return NO; for (NSDictionary *item in self.attachments) if (![item[@"type"] isEqualToString:@"photo"]) return NO; return YES; }
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return [self isPhotoGrid] ? (self.attachments.count+2)/3 : self.attachments.count; }
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)path { return [self isPhotoGrid] ? floor((tableView.bounds.size.width-16)/3)+4 : 70; }
-- (void)openPhotoTile:(UIButton *)sender { if ((NSUInteger)sender.tag>=self.attachments.count) return; [self.navigationController pushViewController:[[OVKPhotoController alloc] initWithPhotos:self.attachments index:sender.tag] animated:YES]; }
+- (void)openPhotoTile:(UIButton *)sender { if ((NSUInteger)sender.tag>=self.attachments.count) return; OVKPresentPhoto(self,[[OVKPhotoController alloc] initWithPhotos:self.attachments index:sender.tag]); }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)path {
     if ([self isPhotoGrid]) {
         UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil]; cell.selectionStyle=UITableViewCellSelectionStyleNone; cell.backgroundColor=[UIColor colorWithWhite:.12 alpha:1];
@@ -896,7 +939,7 @@ static void OVKRouteRemoteControl(UIEvent *event) {
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)path {
     [tableView deselectRowAtIndexPath:path animated:YES]; if ([self isPhotoGrid]) return; NSDictionary *item = self.attachments[path.row];
     if ([item[@"type"] isEqualToString:@"photo"]) { NSMutableArray *photos=[NSMutableArray array]; for (NSDictionary *candidate in self.attachments) if ([candidate[@"type"] isEqualToString:@"photo"]) [photos addObject:candidate];
-        OVKPhotoController *photo = [[OVKPhotoController alloc] initWithPhotos:photos index:[photos indexOfObject:item]]; [self.navigationController pushViewController:photo animated:YES]; }
+        OVKPhotoController *photo = [[OVKPhotoController alloc] initWithPhotos:photos index:[photos indexOfObject:item]]; OVKPresentPhoto(self,photo); }
     else {
         BOOL audio=[item[@"type"] isEqualToString:@"audio"];
         if (audio && OVKCurrentMusic) { [OVKCurrentMusic stop]; UINavigationController *oldNav=OVKCurrentMusic.navigationController; if (oldNav) { NSMutableArray *stack=[oldNav.viewControllers mutableCopy]; [stack removeObject:OVKCurrentMusic]; [oldNav setViewControllers:stack animated:NO]; } }

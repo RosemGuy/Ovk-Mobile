@@ -27,3 +27,5 @@ typedef void (^OVKDownloadCompletion)(NSURL *file, NSError *error);
 @interface OVKLibraryController : OVKAttachmentsController
 - (id)initWithKind:(NSString *)kind identifier:(NSNumber *)identifier title:(NSString *)title;
 @end
+
+void OVKPresentPhoto(UIViewController *presenter, OVKPhotoController *photo);

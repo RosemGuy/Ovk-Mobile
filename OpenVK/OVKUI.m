@@ -470,7 +470,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
         [self loadFriendship];
     }];
 }
-- (void)profilePhotoTapped:(UIButton *)button { [self.navigationController pushViewController:[[OVKPhotoController alloc] initWithPhotos:self.profilePhotos index:button.tag] animated:YES]; }
+- (void)profilePhotoTapped:(UIButton *)button { OVKPresentPhoto(self,[[OVKPhotoController alloc] initWithPhotos:self.profilePhotos index:button.tag]); }
 - (void)openProfileFriends { [self.navigationController pushViewController:[[OVKListController alloc] initWithMode:@"friends" identifier:self.identifier title:OVKL(@"Друзья")] animated:YES]; }
 - (void)wallFilter:(UISegmentedControl *)filter { if (self.loading) { filter.selectedSegmentIndex=self.ownerOnly ? 1 : 0; return; } self.ownerOnly=filter.selectedSegmentIndex==1; [self refresh]; }
 - (void)showProfileInfo { self.profileInfo=YES; self.profileTabs.selectedSegmentIndex=1; self.tableView.tableFooterView=nil; [self.tableView reloadData]; }
@@ -576,15 +576,15 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     NSString *avatarURL = OVKString(person[@"photo_max_orig"] ?: person[@"photo_200"] ?: person[@"photo_100"] ?: person[@"photo_50"]);
     __weak OVKListController *weakSelf = self; cell.photoTapped=^{
         NSMutableArray *photos=[NSMutableArray array]; for (NSDictionary *attachment in OVKPostAttachments(item)) if ([attachment[@"type"] isEqualToString:@"photo"]) [photos addObject:attachment];
-        if (photos.count) [weakSelf.navigationController pushViewController:[[OVKPhotoController alloc] initWithPhotos:photos index:0] animated:YES];
+        if (photos.count) OVKPresentPhoto(weakSelf,[[OVKPhotoController alloc] initWithPhotos:photos index:0]);
     };
-    cell.photoIndexTapped=^(NSUInteger index) { if (index<photos.count) [weakSelf.navigationController pushViewController:[[OVKPhotoController alloc] initWithPhotos:photos index:index] animated:YES]; };
+    cell.photoIndexTapped=^(NSUInteger index) { if (index<photos.count) OVKPresentPhoto(weakSelf,[[OVKPhotoController alloc] initWithPhotos:photos index:index]); };
     cell.commentTapped=^{ [weakSelf openCommentsFor:item]; };
     cell.liked=[OVKDictionary(item[@"likes"])[@"user_likes"] boolValue]; cell.likeButton.enabled=OVKPostAllowsAction(item,@"like",[OVKAPI shared].userID) && ![self.postRequests containsObject:[self postRequestKey:item]]; cell.likeTapped=^{ [weakSelf togglePostLike:item]; };
     id rawProfileID=[self.mode isEqualToString:@"friends"] ? item[@"id"] : (item[@"from_id"] ?: item[@"source_id"] ?: person[@"id"]);
     if ([self.mode isEqualToString:@"dialogs"]) rawProfileID=OVKDictionary(OVKDictionary(item[@"conversation"])[@"peer"])[@"id"];
     NSNumber *profileID=@([OVKString(rawProfileID) longLongValue]); BOOL userProfile=profileID.longLongValue>0 && (![self.mode isEqualToString:@"dialogs"] || profileID.longLongValue<2000000000LL);
-    cell.avatarTapped = ^{ if (userProfile) [weakSelf.navigationController pushViewController:[[OVKListController alloc] initWithMode:@"profile" identifier:profileID title:OVKName(person)] animated:YES]; else if (avatarURL.length) [weakSelf.navigationController pushViewController:[[OVKPhotoController alloc] initWithURL:avatarURL title:OVKL(@"Аватар")] animated:YES]; };
+    cell.avatarTapped = ^{ if (userProfile) [weakSelf.navigationController pushViewController:[[OVKListController alloc] initWithMode:@"profile" identifier:profileID title:OVKName(person)] animated:YES]; else if (avatarURL.length) OVKPresentPhoto(weakSelf,[[OVKPhotoController alloc] initWithURL:avatarURL title:OVKL(@"Аватар")]); };
     NSDictionary *message = [self.mode isEqualToString:@"dialogs"] ? OVKDictionary(item[@"last_message"]) : item;
     NSString *date = OVKDate(message[@"date"]); NSInteger unread = [OVKDictionary(item[@"conversation"])[@"unread_count"] integerValue];
     cell.unreadBadge.text=unread>99 ? @"99+" : [NSString stringWithFormat:@"%ld",(long)unread];
@@ -690,7 +690,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 }
 - (void)openProfilePhoto {
     NSString *url = OVKString(self.user[@"photo_max_orig"] ?: self.user[@"photo_200"] ?: self.user[@"photo_100"]);
-    if (url.length) [self.navigationController pushViewController:[[OVKPhotoController alloc] initWithURL:url title:OVKL(@"Аватар")] animated:YES];
+    if (url.length) OVKPresentPhoto(self,[[OVKPhotoController alloc] initWithURL:url title:OVKL(@"Аватар")]);
 }
 - (void)openPost {
     NSDictionary *post = self.singlePost; NSString *owner = OVKString(post[@"owner_id"] ?: post[@"source_id"] ?: post[@"from_id"]); NSString *identifier = OVKString(post[@"id"] ?: post[@"post_id"]);

@@ -234,7 +234,8 @@
     [button setTitle:title forState:UIControlStateNormal]; [button setTitleColor:OVKBlue() forState:UIControlStateNormal]; button.titleLabel.font = [UIFont boldSystemFontOfSize:15]; [button addTarget:self action:action forControlEvents:UIControlEventTouchUpInside]; [container addSubview:button]; return button;
 }
 - (void)viewDidLoad {
-    [super viewDidLoad]; self.title = @"Ovk-Mobile"; self.navigationItem.rightBarButtonItem=[[UIBarButtonItem alloc] initWithTitle:OVKL(@"Музыка") style:UIBarButtonItemStylePlain target:self action:@selector(localMusic)];
+    [super viewDidLoad]; self.title = @"Ovk-Mobile"; self.navigationItem.rightBarButtonItem=[UIBarButtonItem alloc];
+        //initWithTitle:OVKL(@"Музыка") style:UIBarButtonItemStylePlain target:self action:@selector(localMusic)];
     self.navigationItem.leftBarButtonItem=[[UIBarButtonItem alloc] initWithTitle:OVKL(@"Аккаунты") style:UIBarButtonItemStylePlain target:self action:@selector(openSavedAccounts)];
     OVKConfigureEdges(self);
     UIImageView *backdrop=[[UIImageView alloc] initWithImage:[UIImage imageNamed:@"LoginBackdrop"]]; backdrop.frame=self.view.bounds; backdrop.autoresizingMask=UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight; [self.view addSubview:backdrop];

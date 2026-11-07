@@ -314,6 +314,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
 @property (strong, nonatomic) UIButton *musicRepeat;
 @property (strong, nonatomic) UIButton *musicShuffle;
 @property (strong, nonatomic) UILabel *musicRepeatOne;
+@property (assign, nonatomic) BOOL musicQueueVisible;
 @property (assign, nonatomic) NSInteger repeatMode;
 @property (assign, nonatomic) BOOL shuffleEnabled;
 @property (strong, nonatomic) NSArray *playOrder;
@@ -663,6 +664,10 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     if (!self.musicView) return;
     self.navigationItem.rightBarButtonItems=nil;
     self.navigationItem.rightBarButtonItem=nil;
+    if (UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad) return;
+    UIBarButtonItem *queue=[[UIBarButtonItem alloc] initWithTitle:self.musicQueueVisible ? OVKL(@"Обложка") : OVKL(@"Очередь") style:UIBarButtonItemStylePlain target:self action:@selector(toggleMusicQueue)];
+    [queue setBackgroundImage:[[UIImage imageNamed:@"MusicButton"] resizableImageWithCapInsets:UIEdgeInsetsMake(5,7,5,7)] forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+    self.navigationItem.rightBarButtonItem=queue;
 }
 - (void)buildMusicPlayer {
     if (!self.queue.count) { self.queue=@[self.item]; self.queueIndex=0; }
@@ -677,7 +682,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     self.musicRepeatOne=[[UILabel alloc] initWithFrame:CGRectMake(31,2,10,12)]; self.musicRepeatOne.text=@"1"; self.musicRepeatOne.textColor=[UIColor whiteColor]; self.musicRepeatOne.backgroundColor=[UIColor clearColor]; self.musicRepeatOne.font=[UIFont boldSystemFontOfSize:10]; [self.musicRepeat addSubview:self.musicRepeatOne];
     self.musicCover=[[OVKRemoteImageView alloc] initWithImage:[UIImage imageNamed:@"MusicCover"]]; self.musicCover.contentMode=UIViewContentModeScaleAspectFit; [self.musicView addSubview:self.musicCover];
     NSDictionary *object=OVKDictionary(self.item[@"object"]),*album=OVKDictionary(object[@"album"]);
-    CGFloat titleWidth=MAX(90,MIN(280,self.view.bounds.size.width-100)); UIView *heading=[[UIView alloc] initWithFrame:CGRectMake(0,0,titleWidth,40)];
+    CGFloat titleWidth=MAX(90,MIN(280,self.view.bounds.size.width-170)); UIView *heading=[[UIView alloc] initWithFrame:CGRectMake(0,0,titleWidth,40)];
     NSArray *lines=@[OVKString(object[@"artist"]),OVKString(object[@"title"]).length ? OVKString(object[@"title"]) : self.title,OVKString(album[@"title"])];
     for (NSUInteger i=0;i<3;i++) { UILabel *line=[[UILabel alloc] initWithFrame:CGRectMake(0,i*13,titleWidth,13)]; line.autoresizingMask=UIViewAutoresizingFlexibleWidth; line.text=lines[i]; line.font=i==1 ? [UIFont boldSystemFontOfSize:12] : [UIFont systemFontOfSize:11]; line.textColor=i==1 ? [UIColor whiteColor] : [UIColor lightGrayColor]; line.backgroundColor=[UIColor clearColor]; line.textAlignment=NSTextAlignmentCenter; [heading addSubview:line]; } self.navigationItem.titleView=heading;
     NSString *coverURL=OVKPhotoSource(OVKDictionary(album[@"thumb"])); if (coverURL.length) [self.musicCover load:coverURL];
@@ -694,7 +699,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews]; if (!self.musicView) return;
     CGFloat width=self.view.bounds.size.width,height=self.view.bounds.size.height; BOOL pad=UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad;
-    OVKMusicLayout layout=OVKMusicPlayerLayout(width,height,pad,NO);
+    OVKMusicLayout layout=OVKMusicPlayerLayout(width,height,pad,self.musicQueueVisible);
     self.musicView.frame=self.view.bounds;
     self.musicTimeline.frame=CGRectMake(layout.timeline.x,layout.timeline.y,layout.timeline.width,layout.timeline.height);
     self.musicCover.frame=CGRectMake(layout.cover.x,layout.cover.y,layout.cover.width,layout.cover.height); self.musicCover.hidden=!layout.showCover;
@@ -706,6 +711,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     for (NSUInteger i=0;i<self.musicButtons.count;i++) ((UIButton *)self.musicButtons[i]).frame=CGRectMake(width/2-32+((NSInteger)i-1)*96,4,64,52);
     CGFloat volumeWidth=MIN(560,width-40); self.musicVolume.frame=CGRectMake((width-volumeWidth)/2,64,volumeWidth,28);
 }
+- (void)toggleMusicQueue { self.musicQueueVisible=!self.musicQueueVisible; [self configureMusicNavigation]; [self.view setNeedsLayout]; if (self.musicQueueVisible && self.queueIndex<self.queue.count) [self.musicQueueTable scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:self.queueIndex inSection:0] atScrollPosition:UITableViewScrollPositionMiddle animated:NO]; }
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return self.queue.count; }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)path {
     UITableViewCell *cell=[tableView dequeueReusableCellWithIdentifier:@"music-queue"]; if (!cell) cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"music-queue"];

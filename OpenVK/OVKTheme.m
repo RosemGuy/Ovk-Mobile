@@ -7,7 +7,7 @@ NSArray *OVKThemeColors(void) { static NSArray *colors; static dispatch_once_t o
 static void OVKLoadTheme(void) { static dispatch_once_t once; dispatch_once(&once, ^{ NSUserDefaults *settings=[NSUserDefaults standardUserDefaults]; NSString *color=[settings stringForKey:@"OVKThemeColor"]; OVKColor=[OVKThemeColors() containsObject:color ?: @""] ? [color copy] : @"blue"; OVKDark=[settings boolForKey:@"OVKDarkTheme"]; }); }
 NSString *OVKThemeColor(void) { OVKLoadTheme(); return OVKColor; }
 BOOL OVKDarkTheme(void) { OVKLoadTheme(); return OVKDark; }
-void OVKSetThemeColor(NSString *color) { if (![OVKThemeColors() containsObject:color]) return; OVKLoadTheme(); OVKColor=[color copy]; [[NSUserDefaults standardUserDefaults] setObject:color forKey:@"OVKThemeColor"]; OVKClearThemeCaches(); [[NSNotificationCenter defaultCenter] postNotificationName:@"OVKThemeChanged" object:nil]; OVKSyncApplicationIcon(); }
+void OVKSetThemeColor(NSString *color) { if (![OVKThemeColors() containsObject:color]) return; OVKLoadTheme(); OVKColor=[color copy]; [[NSUserDefaults standardUserDefaults] setObject:color forKey:@"OVKThemeColor"]; OVKClearThemeCaches(); [[NSNotificationCenter defaultCenter] postNotificationName:@"OVKThemeChanged" object:nil]; }
 void OVKSetDarkTheme(BOOL dark) { OVKLoadTheme(); OVKDark=dark; [[NSUserDefaults standardUserDefaults] setBool:dark forKey:@"OVKDarkTheme"]; OVKClearThemeCaches(); [[NSNotificationCenter defaultCenter] postNotificationName:@"OVKThemeChanged" object:nil]; }
 static NSDictionary *OVKAccentPalette(BOOL dark) {
     static NSDictionary *palettes[2]; static dispatch_once_t once; dispatch_once(&once, ^{
@@ -57,23 +57,15 @@ UIImage *OVKThemeLogo(void) {
     UIRectFillUsingBlendMode((CGRect){CGPointZero,source.size},kCGBlendModeSourceIn);
     UIImage *result=UIGraphicsGetImageFromCurrentImageContext(); UIGraphicsEndImageContext(); return result;
 }
-// Public iOS 10.3 API, declared here so SDK 7.1 can still compile the client.
-// Every access is gated by runtime availability; no implementation is supplied.
+// Restore the primary icon for installations that previously selected a theme icon.
 #if __IPHONE_OS_VERSION_MAX_ALLOWED < 100300
-@interface UIApplication (OVKAlternateIconAPI)
-@property (nonatomic, readonly) BOOL supportsAlternateIcons;
+@interface UIApplication (OVKPrimaryIconAPI)
 @property (nonatomic, readonly) NSString *alternateIconName;
 - (void)setAlternateIconName:(NSString *)name completionHandler:(void (^)(NSError *error))completion;
 @end
 #endif
-void OVKSyncApplicationIcon(void) {
+void OVKRestoreDefaultApplicationIcon(void) {
     UIApplication *app=[UIApplication sharedApplication];
-    if (![app respondsToSelector:@selector(supportsAlternateIcons)] || ![app respondsToSelector:@selector(setAlternateIconName:completionHandler:)] || !app.supportsAlternateIcons || app.applicationState!=UIApplicationStateActive) return;
-    static BOOL changing=NO; if (changing) return;
-    NSString *name=[OVKThemeColor() isEqualToString:@"blue"] ? nil : [@"Theme-" stringByAppendingString:OVKThemeColor()];
-    if (app.alternateIconName==name || [app.alternateIconName isEqualToString:name]) return;
-    changing=YES;
-    [app setAlternateIconName:name completionHandler:^(NSError *error) {
-        dispatch_async(dispatch_get_main_queue(), ^{ changing=NO; if (error) NSLog(@"Ovk-Mobile icon update: %@",error.localizedDescription); else OVKSyncApplicationIcon(); });
-    }];
+    if (![app respondsToSelector:@selector(alternateIconName)] || ![app respondsToSelector:@selector(setAlternateIconName:completionHandler:)] || !app.alternateIconName || app.applicationState!=UIApplicationStateActive) return;
+    [app setAlternateIconName:nil completionHandler:^(NSError *error) { if (error) NSLog(@"Ovk-Mobile primary icon: %@",error.localizedDescription); }];
 }

@@ -39,54 +39,6 @@
 			<key>UIPrerenderedIcon</key>
 			<true/>
 		</dict>
-		<key>CFBundleAlternateIcons</key>
-		<dict>
-			<key>Theme-purple</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>Theme-purple-60</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<true/>
-			</dict>
-			<key>Theme-red</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>Theme-red-60</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<true/>
-			</dict>
-			<key>Theme-green</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>Theme-green-60</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<true/>
-			</dict>
-			<key>Theme-orange</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>Theme-orange-60</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<true/>
-			</dict>
-			<key>Theme-pink</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>Theme-pink-60</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<true/>
-			</dict>
-		</dict>
 	</dict>
 	<key>CFBundleIcons~ipad</key>
 	<dict>
@@ -99,59 +51,6 @@
 			</array>
 			<key>UIPrerenderedIcon</key>
 			<true/>
-		</dict>
-		<key>CFBundleAlternateIcons</key>
-		<dict>
-			<key>Theme-purple</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>Theme-purple-76</string>
-					<string>Theme-purple-83.5</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<true/>
-			</dict>
-			<key>Theme-red</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>Theme-red-76</string>
-					<string>Theme-red-83.5</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<true/>
-			</dict>
-			<key>Theme-green</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>Theme-green-76</string>
-					<string>Theme-green-83.5</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<true/>
-			</dict>
-			<key>Theme-orange</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>Theme-orange-76</string>
-					<string>Theme-orange-83.5</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<true/>
-			</dict>
-			<key>Theme-pink</key>
-			<dict>
-				<key>CFBundleIconFiles</key>
-				<array>
-					<string>Theme-pink-76</string>
-					<string>Theme-pink-83.5</string>
-				</array>
-				<key>UIPrerenderedIcon</key>
-				<true/>
-			</dict>
 		</dict>
 	</dict>
 	<key>CFBundleIdentifier</key>

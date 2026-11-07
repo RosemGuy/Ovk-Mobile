@@ -19,7 +19,7 @@
     self.window.rootViewController = [[OVKRootController alloc] init];
 }
 - (void)applicationDidReceiveMemoryWarning:(UIApplication *)application { [OVKMedia clearImageCache]; OVKClearThemeCaches(); }
-- (void)applicationDidBecomeActive:(UIApplication *)application { OVKSyncApplicationIcon(); }
+- (void)applicationDidBecomeActive:(UIApplication *)application { OVKRestoreDefaultApplicationIcon(); }
 - (BOOL)canBecomeFirstResponder { return YES; }
 - (void)remoteControlReceivedWithEvent:(UIEvent *)event { [OVKMedia handleRemoteControl:event]; }
 - (BOOL)application:(UIApplication *)application openURL:(NSURL *)url sourceApplication:(NSString *)source annotation:(id)annotation {

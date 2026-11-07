@@ -158,7 +158,7 @@
     CGRect panelFrame=panel.frame; panelFrame.size.height=505; panel.frame=panelFrame; self.scroll.contentSize=CGSizeMake(320,505);
     if (self.embedded) {
         self.scroll.scrollEnabled=NO; self.scroll.backgroundColor=[UIColor clearColor]; backdrop.hidden=YES; server.hidden=YES;
-        wordmark.image=[UIImage imageNamed:@"Avatar"]; wordmark.frame=CGRectMake(112,18,96,96);
+        wordmark.image=OVKThemeLogo(); wordmark.frame=CGRectMake(112,18,96,96);
         self.username.frame=CGRectMake(20,130,280,42); self.password.frame=CGRectMake(20,182,280,42); self.login.frame=CGRectMake(20,236,280,42);
         self.status.frame=CGRectMake(20,284,280,28); self.status.font=[UIFont systemFontOfSize:10]; self.status.numberOfLines=2; self.status.text=@""; self.spinner.frame=CGRectMake(150,288,20,20);
         panel.frame=CGRectMake(0,0,320,316); self.scroll.contentSize=CGSizeMake(320,316);
@@ -329,26 +329,26 @@
         OVKLoginController *page = weakSelf; if (!page) return;
         page.customServer = site; page.customAPI = api; page.serverField.enabled = NO; page.instancePicker.selectedSegmentIndex = 1; [page selectInstance]; [page prepare];
     }];
-    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:list]; OVKStyleNavigation(nav); [self presentViewController:nav animated:YES completion:nil];
+    UINavigationController *nav = [[OVKNavigationController alloc] initWithRootViewController:list]; OVKStyleNavigation(nav); [self presentViewController:nav animated:YES completion:nil];
 }
 - (void)verifyProtection {
     if (!self.checkButton.enabled || ![self prepare]) return;
     OVKVerificationController *page = [[OVKVerificationController alloc] init]; page.server = [OVKAPI shared].server;
-    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:page]; OVKStyleNavigation(nav); [self presentViewController:nav animated:YES completion:nil];
+    UINavigationController *nav = [[OVKNavigationController alloc] initWithRootViewController:page]; OVKStyleNavigation(nav); [self presentViewController:nav animated:YES completion:nil];
 }
 - (void)alertView:(UIAlertView *)alert clickedButtonAtIndex:(NSInteger)index { if (alert.tag == 403 && index == 1) [self verifyProtection]; }
 - (void)passwordLogin {
     if (![self prepare]) return;
     OVKPasswordController *login = [[OVKPasswordController alloc] init]; login.server = [OVKAPI shared].server;
     __weak OVKLoginController *weakSelf = self; login.received = ^(NSString *token){ [weakSelf validate:token]; };
-    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:login]; OVKStyleNavigation(nav); [self presentViewController:nav animated:YES completion:nil];
+    UINavigationController *nav = [[OVKNavigationController alloc] initWithRootViewController:login]; OVKStyleNavigation(nav); [self presentViewController:nav animated:YES completion:nil];
 }
 - (void)oauth {
     if (![self prepare]) return;
     OVKOAuthController *oauth = [[OVKOAuthController alloc] init]; oauth.server = [OVKAPI shared].siteServer;
     __weak OVKLoginController *weakSelf = self;
     oauth.received = ^(NSString *token){ [weakSelf validate:token]; };
-    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:oauth]; OVKStyleNavigation(nav); [self presentViewController:nav animated:YES completion:nil];
+    UINavigationController *nav = [[OVKNavigationController alloc] initWithRootViewController:oauth]; OVKStyleNavigation(nav); [self presentViewController:nav animated:YES completion:nil];
 }
 - (void)tokenLogin { if ([self prepare]) [self validate:[self.tokenField.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]]]; }
 - (void)validate:(NSString *)token {

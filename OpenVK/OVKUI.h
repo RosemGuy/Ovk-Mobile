@@ -38,3 +38,6 @@ NSString *OVKMenuTitle(NSString *mode);
 
 @interface OVKMessagesController : UIViewController
 @end
+
+@interface OVKNavigationController : UINavigationController
+@end

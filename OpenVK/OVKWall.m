@@ -113,7 +113,7 @@
     if (!self.canPost || !self.reference) return;
     OVKComposeController *editor=[[OVKComposeController alloc] init]; editor.identifier=self.reference[@"owner_id"]; editor.postID=self.reference[@"post_id"]; if (comment) { editor.replyID=@([OVKString(comment[@"id"]) longLongValue]); editor.replyName=[self nameFor:comment]; }
     __weak OVKCommentsController *weakSelf=self; editor.sent=^{ [weakSelf refreshComments]; };
-    UINavigationController *nav=[[UINavigationController alloc] initWithRootViewController:editor]; OVKStyleNavigation(nav); [self presentViewController:nav animated:YES completion:nil];
+    UINavigationController *nav=[[OVKNavigationController alloc] initWithRootViewController:editor]; OVKStyleNavigation(nav); [self presentViewController:nav animated:YES completion:nil];
 }
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)path {
     [tableView deselectRowAtIndexPath:path animated:YES]; self.selectedComment=self.items[path.row]; self.replyAction=self.mediaAction=self.profileAction=NSNotFound;

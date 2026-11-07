@@ -21,3 +21,6 @@ void OVKSetThemeColor(NSString *color);
 void OVKThemeSection(UIView *view);
 
 void OVKClearThemeCaches(void);
+
+UIImage *OVKThemeLogo(void);
+void OVKSyncApplicationIcon(void);

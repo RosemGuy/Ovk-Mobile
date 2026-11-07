@@ -257,9 +257,11 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRefresh target:self action:@selector(loadPhoto)]; [self loadPhoto];
 }
 - (void)viewWillAppear:(BOOL)animated { [super viewWillAppear:animated]; self.photoNavigationWasHidden=self.navigationController.navigationBarHidden; self.photoStatusWasHidden=[UIApplication sharedApplication].statusBarHidden; [self.navigationController setNavigationBarHidden:YES animated:animated]; [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationNone]; }
+- (BOOL)shouldAutorotate { return YES; }
+- (NSUInteger)supportedInterfaceOrientations { return UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad ? UIInterfaceOrientationMaskAll : UIInterfaceOrientationMaskAllButUpsideDown; }
 - (BOOL)prefersStatusBarHidden { return YES; }
 - (void)viewWillDisappear:(BOOL)animated { [super viewWillDisappear:animated]; [self.navigationController setNavigationBarHidden:self.photoNavigationWasHidden animated:animated]; [[UIApplication sharedApplication] setStatusBarHidden:self.photoStatusWasHidden withAnimation:UIStatusBarAnimationNone]; }
-- (void)closePhoto { ++self.photoGeneration; [self.task cancel]; self.task=nil; if (self.navigationController.presentingViewController) [self.navigationController dismissViewControllerAnimated:YES completion:nil]; else [self.navigationController popViewControllerAnimated:YES]; }
+- (void)closePhoto { ++self.photoGeneration; [self.task cancel]; self.task=nil; if (self.navigationController.presentingViewController) [self.navigationController dismissViewControllerAnimated:YES completion:^{ [UIViewController attemptRotationToDeviceOrientation]; }]; else [self.navigationController popViewControllerAnimated:YES]; }
 - (void)togglePhotoControls { self.photoControlsHidden=!self.photoControlsHidden; self.photoTopBar.hidden=self.photoControlsHidden; self.photoToolbar.hidden=self.photoControlsHidden; }
 - (void)loadPhoto {
     NSUInteger generation=++self.photoGeneration; [self.task cancel]; self.task=nil; self.scroll.zoomScale=1; self.photo.image=nil; self.status.hidden=YES; [self.photoSpinner startAnimating];
@@ -302,7 +304,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
 - (void)dealloc { [_task cancel]; _scroll.delegate = nil; }
 @end
 void OVKPresentPhoto(UIViewController *presenter, OVKPhotoController *photo) {
-    UINavigationController *navigation=[[UINavigationController alloc] initWithRootViewController:photo];
+    UINavigationController *navigation=[[OVKNavigationController alloc] initWithRootViewController:photo];
     navigation.modalPresentationStyle=UIModalPresentationFullScreen;
     [presenter presentViewController:navigation animated:YES completion:nil];
 }
@@ -399,6 +401,11 @@ void OVKPresentPhoto(UIViewController *presenter, OVKPhotoController *photo) {
 }
 - (void)viewDidAppear:(BOOL)animated { [super viewDidAppear:animated]; if (![self.item[@"type"] isEqualToString:@"video"]) { UIResponder *responder=(UIResponder *)[UIApplication sharedApplication].delegate; [responder becomeFirstResponder]; } }
 - (void)viewWillDisappear:(BOOL)animated { [super viewWillDisappear:animated]; if ([self.item[@"type"] isEqualToString:@"video"]) { if (!self.enteringVideoFullscreen && !self.movie.fullscreen) [self stop]; if (!self.enteringVideoFullscreen && !self.movie.fullscreen) [self.navigationController setNavigationBarHidden:self.playbackNavigationWasHidden animated:animated]; } self.navigationController.navigationBar.barStyle=UIBarStyleDefault; OVKStyleNavigation(self.navigationController); }
+- (BOOL)shouldAutorotate { return YES; }
+- (NSUInteger)supportedInterfaceOrientations {
+    if (UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad) return UIInterfaceOrientationMaskAll;
+    return [self.item[@"type"] isEqualToString:@"video"] ? UIInterfaceOrientationMaskAllButUpsideDown : UIInterfaceOrientationMaskPortrait;
+}
 - (void)beginAudioTask {
     if (self.audioTask!=UIBackgroundTaskInvalid || [self.item[@"type"] isEqualToString:@"video"]) return;
     __weak OVKPlaybackController *weakSelf=self;
@@ -856,7 +863,7 @@ void OVKPresentPhoto(UIViewController *presenter, OVKPhotoController *photo) {
 - (void)videoExitedFullscreen:(NSNotification *)note {
     if (note.object!=self.movie || self.stopped) return;
     [self stop]; [self.navigationController setNavigationBarHidden:self.playbackNavigationWasHidden animated:NO];
-    if (self.navigationController.topViewController==self) [self.navigationController popViewControllerAnimated:NO];
+    if (self.navigationController.topViewController==self) [self.navigationController popViewControllerAnimated:NO]; [UIViewController attemptRotationToDeviceOrientation];
 }
 - (void)movieEnded:(NSNotification *)note {
     if (![NSThread isMainThread]) { __weak OVKPlaybackController *weakSelf=self; dispatch_async(dispatch_get_main_queue(), ^{ [weakSelf movieEnded:note]; }); return; }

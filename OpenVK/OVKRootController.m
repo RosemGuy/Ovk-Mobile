@@ -151,7 +151,7 @@ static UIImage *OVKMenuGlyph(void) {
         else if ([mode isEqualToString:@"audio"]) page=[[OVKMusicController alloc] init];
         else if ([@[@"photo",@"video"] containsObject:mode]) page = [[OVKLibraryController alloc] initWithKind:mode identifier:[OVKAPI shared].userID title:title];
         else page = [[OVKListController alloc] initWithMode:mode identifier:[OVKAPI shared].userID title:title];
-        nav = [[UINavigationController alloc] initWithRootViewController:page]; OVKStyleNavigation(nav); if ([page isKindOfClass:[OVKMessagesController class]]) [nav setNavigationBarHidden:YES animated:NO]; self.sections[mode] = nav;
+        nav = [[OVKNavigationController alloc] initWithRootViewController:page]; OVKStyleNavigation(nav); if ([page isKindOfClass:[OVKMessagesController class]]) [nav setNavigationBarHidden:YES animated:NO]; self.sections[mode] = nav;
     }
     if (self.active != nav) {
         [self.active willMoveToParentViewController:nil]; [self.active.view removeFromSuperview]; [self.active removeFromParentViewController];
@@ -180,6 +180,8 @@ static UIImage *OVKMenuGlyph(void) {
     self.opened = NO; [self.cover removeFromSuperview]; self.cover = nil;
     [UIView animateWithDuration:.2 animations:^{ self.active.view.transform = CGAffineTransformIdentity; }];
 }
+- (BOOL)shouldAutorotate { return YES; }
+- (NSUInteger)supportedInterfaceOrientations { return self.active ? self.active.supportedInterfaceOrientations : UIInterfaceOrientationMaskPortrait; }
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning]; for (NSString *mode in [self.sections allKeys]) if (![mode isEqualToString:self.selected] && ![mode isEqualToString:@"audio"]) [self.sections removeObjectForKey:mode];
 }

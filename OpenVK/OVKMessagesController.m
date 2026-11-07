@@ -16,9 +16,9 @@
     [super viewDidLoad]; OVKConfigureEdges(self); self.chats=[NSMutableDictionary dictionary]; self.recentChats=[NSMutableArray array];
     OVKListController *dialogs=[[OVKListController alloc] initWithMode:@"dialogs" identifier:[OVKAPI shared].userID title:OVKL(@"Сообщения")]; __weak OVKMessagesController *weakSelf=self;
     dialogs.dialogSelected=^(NSNumber *peer,NSString *title) { [weakSelf showChat:peer title:title]; };
-    self.dialogsNavigation=[[UINavigationController alloc] initWithRootViewController:dialogs];
+    self.dialogsNavigation=[[OVKNavigationController alloc] initWithRootViewController:dialogs];
     UIViewController *empty=[[UIViewController alloc] init]; empty.title=OVKL(@"Сообщения");
-    self.chatNavigation=[[UINavigationController alloc] initWithRootViewController:empty];
+    self.chatNavigation=[[OVKNavigationController alloc] initWithRootViewController:empty];
     for (UINavigationController *navigation in @[self.dialogsNavigation,self.chatNavigation]) { [self addChildViewController:navigation]; [self.view addSubview:navigation.view]; [navigation didMoveToParentViewController:self]; }
     self.emptyLabel=[[UILabel alloc] initWithFrame:empty.view.bounds]; self.emptyLabel.autoresizingMask=UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight; self.emptyLabel.backgroundColor=[UIColor clearColor]; self.emptyLabel.textAlignment=NSTextAlignmentCenter; self.emptyLabel.font=[UIFont systemFontOfSize:17]; self.emptyLabel.numberOfLines=3; [empty.view addSubview:self.emptyLabel];
     self.divider=[[UIView alloc] init]; [self.view addSubview:self.divider];

@@ -702,7 +702,17 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 - (void)openChat { [self.navigationController pushViewController:[[OVKListController alloc] initWithMode:@"chat" identifier:self.identifier title:OVKName(self.user)] animated:YES]; }
 - (void)compose {
     OVKComposeController *compose = [[OVKComposeController alloc] init]; compose.identifier = [self isChat] ? self.identifier : [OVKAPI shared].userID; compose.message = [self isChat]; __weak OVKListController *weakSelf = self; if ([self isChat]) compose.sent = ^{ [weakSelf refresh]; };
-    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:compose]; OVKStyleNavigation(nav); [self presentViewController:nav animated:YES completion:nil];
+    UINavigationController *nav = [[OVKNavigationController alloc] initWithRootViewController:compose]; OVKStyleNavigation(nav); [self presentViewController:nav animated:YES completion:nil];
 }
 - (void)dealloc { [[NSNotificationCenter defaultCenter] removeObserver:self]; }
+@end
+
+@implementation OVKNavigationController
+- (BOOL)shouldAutorotate { return YES; }
+- (NSUInteger)supportedInterfaceOrientations {
+    UIViewController *page=self.topViewController;
+    if ([page isKindOfClass:[OVKPhotoController class]] || [page isKindOfClass:NSClassFromString(@"OVKPlaybackController")]) return page.supportedInterfaceOrientations;
+    return UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad ? UIInterfaceOrientationMaskAll : UIInterfaceOrientationMaskPortrait;
+}
+- (UIInterfaceOrientation)preferredInterfaceOrientationForPresentation { return UIInterfaceOrientationPortrait; }
 @end

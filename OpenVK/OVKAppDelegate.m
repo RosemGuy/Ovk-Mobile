@@ -12,13 +12,14 @@
     [self.window makeKeyAndVisible]; [[UIApplication sharedApplication] beginReceivingRemoteControlEvents]; [self becomeFirstResponder]; return YES;
 }
 - (void)showLogin {
-    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:[[OVKLoginController alloc] init]]; OVKStyleNavigation(nav);
+    UINavigationController *nav = [[OVKNavigationController alloc] initWithRootViewController:[[OVKLoginController alloc] init]]; OVKStyleNavigation(nav);
     [self.window.rootViewController dismissViewControllerAnimated:NO completion:nil]; self.window.rootViewController = nav;
 }
 - (void)showClient {
     self.window.rootViewController = [[OVKRootController alloc] init];
 }
 - (void)applicationDidReceiveMemoryWarning:(UIApplication *)application { [OVKMedia clearImageCache]; OVKClearThemeCaches(); }
+- (void)applicationDidBecomeActive:(UIApplication *)application { OVKSyncApplicationIcon(); }
 - (BOOL)canBecomeFirstResponder { return YES; }
 - (void)remoteControlReceivedWithEvent:(UIEvent *)event { [OVKMedia handleRemoteControl:event]; }
 - (BOOL)application:(UIApplication *)application openURL:(NSURL *)url sourceApplication:(NSString *)source annotation:(id)annotation {
@@ -33,7 +34,7 @@
             [[NSNotificationCenter defaultCenter] postNotificationName:@"OVKLocalMusicChanged" object:nil];
             UIViewController *root=self.window.rootViewController;
             void (^show)(void)=^{
-                OVKMusicController *music=[[OVKMusicController alloc] init]; UINavigationController *nav=[[UINavigationController alloc] initWithRootViewController:music]; OVKStyleNavigation(nav);
+                OVKMusicController *music=[[OVKMusicController alloc] init]; UINavigationController *nav=[[OVKNavigationController alloc] initWithRootViewController:music]; OVKStyleNavigation(nav);
                 music.navigationItem.leftBarButtonItem=[[UIBarButtonItem alloc] initWithTitle:OVKL(@"Готово") style:UIBarButtonItemStyleDone target:self action:@selector(closeImportedMusic)];
                 [root presentViewController:nav animated:YES completion:nil];
             };

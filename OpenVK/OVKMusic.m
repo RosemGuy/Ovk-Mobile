@@ -23,6 +23,10 @@ BOOL OVKExperimentalVideo(void) { return [[NSUserDefaults standardUserDefaults] 
 }
 @end
 @interface OVKLocalMusicController : OVKAttachmentsController
+@property (assign, nonatomic) BOOL scanning;
+@property (assign, nonatomic) BOOL scanAgain;
+@property (strong, nonatomic) NSArray *lastFileItems;
+@property (strong, nonatomic) UILabel *libraryHint;
 @end
 @implementation OVKLocalMusicController
 - (id)init { return [super initWithAttachments:@[] title:OVKL(@"На устройстве")]; }
@@ -31,13 +35,23 @@ BOOL OVKExperimentalVideo(void) { return [[NSUserDefaults standardUserDefaults] 
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(reloadFiles) name:@"OVKLocalMusicChanged" object:nil];
     [self reloadFiles];
 }
-- (void)viewWillAppear:(BOOL)animated { [super viewWillAppear:animated]; [self reloadFiles]; }
+- (void)viewWillAppear:(BOOL)animated { [super viewWillAppear:animated]; if (!self.scanning) [self reloadFiles]; }
 - (void)reloadFiles {
-    NSArray *items=OVKLocalMusicItems();
-    [self replaceAttachments:items]; [self.refreshControl endRefreshing];
-    UILabel *hint=[[UILabel alloc] initWithFrame:CGRectMake(12,0,self.view.bounds.size.width-24,items.count ? 48 : 120)]; hint.numberOfLines=0; hint.textAlignment=NSTextAlignmentCenter; hint.font=[UIFont systemFontOfSize:13]; hint.textColor=[UIColor grayColor]; hint.backgroundColor=[UIColor clearColor];
-    hint.text=items.count ? OVKL(@"Музыка, сохранённая в приложении") : OVKL(@"Добавьте MP3, M4A или WAV через iTunes → Программы → Общие файлы → Ovk-Mobile.\nИли откройте аудиофайл в Ovk-Mobile из другого приложения.");
-    self.tableView.tableHeaderView=hint;
+    if (self.scanning) { self.scanAgain=YES; return; } self.scanning=YES;
+    __weak OVKLocalMusicController *weakSelf=self;
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW,0), ^{ @autoreleasepool {
+        NSArray *items=OVKLocalMusicItems();
+        dispatch_async(dispatch_get_main_queue(), ^{
+            OVKLocalMusicController *page=weakSelf; if (!page) return; page.scanning=NO;
+            if (![page.lastFileItems isEqualToArray:items]) { page.lastFileItems=items; [page replaceAttachments:items]; }
+            [page.refreshControl endRefreshing];
+            if (!page.libraryHint) { page.libraryHint=[[UILabel alloc] init]; page.libraryHint.numberOfLines=0; page.libraryHint.textAlignment=NSTextAlignmentCenter; page.libraryHint.font=[UIFont systemFontOfSize:13]; page.libraryHint.backgroundColor=[UIColor clearColor]; }
+            page.libraryHint.frame=CGRectMake(0,0,page.view.bounds.size.width,items.count ? 48 : 120); page.libraryHint.textColor=OVKThemeSecondary();
+            page.libraryHint.text=items.count ? OVKL(@"Музыка, сохранённая в приложении") : OVKL(@"Добавьте MP3, M4A или WAV через iTunes → Программы → Общие файлы → Ovk-Mobile.\nИли откройте аудиофайл в Ovk-Mobile из другого приложения.");
+            page.tableView.tableHeaderView=page.libraryHint;
+            if (page.scanAgain) { page.scanAgain=NO; [page reloadFiles]; }
+        });
+    }});
 }
 - (void)dealloc { [[NSNotificationCenter defaultCenter] removeObserver:self]; }
 @end

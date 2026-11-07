@@ -1,0 +1,152 @@
+{
+  "NavButton": [
+    6,
+    8,
+    6,
+    8
+  ],
+  "NavButtonPressed": [
+    6,
+    8,
+    6,
+    8
+  ],
+  "BackButton": [
+    6,
+    14,
+    6,
+    8
+  ],
+  "BackButtonPressed": [
+    6,
+    14,
+    6,
+    8
+  ],
+  "FooterButton": [
+    15,
+    7,
+    15,
+    7
+  ],
+  "FooterButtonPressed": [
+    15,
+    7,
+    15,
+    7
+  ],
+  "ProfileBlueButton": [
+    15,
+    7,
+    15,
+    7
+  ],
+  "ProfileBlueButtonPressed": [
+    15,
+    7,
+    15,
+    7
+  ],
+  "ProfileCounter": [
+    3,
+    3,
+    3,
+    3
+  ],
+  "ProfileCounterPressed": [
+    3,
+    3,
+    3,
+    3
+  ],
+  "ProfileTabs": [
+    3,
+    3,
+    3,
+    3
+  ],
+  "BubbleIncoming": [
+    15,
+    18,
+    15,
+    18
+  ],
+  "BubbleOutgoing": [
+    15,
+    18,
+    15,
+    18
+  ],
+  "MessageField": [
+    15,
+    17,
+    15,
+    17
+  ],
+  "SendButton": [
+    10,
+    20,
+    10,
+    20
+  ],
+  "SendButtonPressed": [
+    10,
+    20,
+    10,
+    20
+  ],
+  "MusicButton": [
+    6,
+    8,
+    6,
+    8
+  ],
+  "MusicPanel": [
+    3,
+    3,
+    3,
+    3
+  ],
+  "LoginButton": [
+    6,
+    8,
+    6,
+    8
+  ],
+  "LoginButtonPressed": [
+    6,
+    8,
+    6,
+    8
+  ],
+  "MenuRow": [
+    1,
+    1,
+    1,
+    1
+  ],
+  "MenuSelected": [
+    1,
+    1,
+    1,
+    1
+  ],
+  "LoginField": [
+    15,
+    14,
+    15,
+    14
+  ],
+  "CellPanel": [
+    3,
+    0,
+    3,
+    0
+  ],
+  "MusicButtonPressed": [
+    6,
+    8,
+    6,
+    8
+  ]
+}

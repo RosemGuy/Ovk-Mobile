@@ -9,3 +9,5 @@ Apple CgBI PNG декодированы из BGRA с premultiplied alpha в ст
 Повторить импорт: `python3 tools/import_vk_ipa_assets.py` (Pillow, исходный IPA рядом с папкой проекта). Для сборки Xcode ни Pillow, ни IPA не нужны — PNG уже включены в проект. Не запускайте старые генераторы chrome поверх этого импорта. Нативное размещение и cap insets требуют проверки на iOS 6/iPad.
 
 Для «Ответов» и «Групп» добавлены ещё три пары: left_answers, left_groups и group_placeholder_50px. Всего импортировано 51 пара; карта и хеши обновлены. Визуальные ориентиры и методы API перечислены в SOCIAL-REFERENCES.md.
+
+Подгон и оптимизация GUI: добавлены black_btn_nav_hl и wall_background. Из wall_background извлечён повторяемый фрагмент 64×64 pt (128×128 px Retina); crop записан в манифесте. Полная карта растяжения — OpenVK/ChromeCaps.json. Подробнее: PERFORMANCE-NOTES.md. Теперь импортировано 53 пары, всего 106 PNG.

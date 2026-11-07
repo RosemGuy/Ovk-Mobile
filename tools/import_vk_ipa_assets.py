@@ -11,7 +11,8 @@ MAP={
  'Navigation':'blue_header','NavButton':'blue_btn_nav','NavButtonPressed':'blue_btn_nav_hl',
  'BackButton':'blue_back_btn_nav','BackButtonPressed':'blue_back_btn_nav_hl',
  'MusicRepeat':'audioplayer_replay','MusicRepeatActive':'audioplayer_replay_hl','MusicShuffle':'audioplayer_shuffle','MusicShuffleActive':'audioplayer_shuffle_hl',
- 'MusicNavigation':'black_header','MusicButton':'black_btn_nav',
+ 'MusicNavigation':'black_header','MusicButton':'black_btn_nav','MusicButtonPressed':'black_btn_nav_hl',
+ 'ProfilePanel':'wall_background',
  'Answers':'left_answers','Groups':'left_groups','GroupPlaceholder':'group_placeholder_50px',
  'News':'left_news','Friends':'left_friends','Messages':'left_messages','Settings':'left_settings',
  'PhotoMedia':'left_photos','AudioMedia':'left_audio','VideoMedia':'left_videos','Profile':'left_wall',
@@ -64,8 +65,11 @@ def main():
   for target,source in MAP.items():
    for suffix in ['', '@2x']:
     name='Payload/vkclient.app/'+source+suffix+'.png';data=archive.read(name);image=decode(data)
+    if target=='ProfilePanel':
+     edge=128 if suffix else 64;image=image.crop((0,0,edge,edge))
     output=ROOT/'OpenVK'/(target+suffix+'.png');image.save(output,optimize=True)
     manifest[output.name]={'source':name,'source_sha256':hashlib.sha256(data).hexdigest(),'sha256':hashlib.sha256(output.read_bytes()).hexdigest(),'size':image.size}
+    if target=='ProfilePanel':manifest[output.name]['crop']=[0,0,edge,edge]
  (ROOT/'tools/vk-ipa-assets.json').write_text(json.dumps({'ipa_sha256':hashlib.sha256(SOURCE.read_bytes()).hexdigest(),'files':manifest},indent=2)+'\n')
  print('Imported',len(manifest),'legacy GUI assets; no logo, app icon or launch image imported.')
 if __name__=='__main__':main()

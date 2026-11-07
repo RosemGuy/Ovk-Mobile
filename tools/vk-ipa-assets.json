@@ -199,6 +199,54 @@
         60
       ]
     },
+    "MusicButtonPressed.png": {
+      "source": "Payload/vkclient.app/black_btn_nav_hl.png",
+      "source_sha256": "f617d93fd2d56224702962609c8858da5de2d4eb2f3b938f8d213442459814ed",
+      "sha256": "814ec52211068667d030deb32c77e391fbfc19a36b0cdbf4656b5ce3e9708a7f",
+      "size": [
+        17,
+        30
+      ]
+    },
+    "MusicButtonPressed@2x.png": {
+      "source": "Payload/vkclient.app/black_btn_nav_hl@2x.png",
+      "source_sha256": "c1da6837a9511ca61e1c370c8ecaa7bc3b86c1ac03a32cb1b309a56c0e60e709",
+      "sha256": "203050c221aa9bf003125edb9bec441e2545b1bca0b927523739d6141e9cf20c",
+      "size": [
+        34,
+        60
+      ]
+    },
+    "ProfilePanel.png": {
+      "source": "Payload/vkclient.app/wall_background.png",
+      "source_sha256": "ab3016599e1d3970429f47d8ce1222cb130888002b805aa1e2f525c53b1b16b9",
+      "sha256": "c041a21767ed5716a4740492c9c7a9d2c8ab7fb229b556d465e3dd2b8c288a7a",
+      "size": [
+        64,
+        64
+      ],
+      "crop": [
+        0,
+        0,
+        64,
+        64
+      ]
+    },
+    "ProfilePanel@2x.png": {
+      "source": "Payload/vkclient.app/wall_background@2x.png",
+      "source_sha256": "ecb56ff51c5d0c75d475d50ccb5f7e9082b5ad3ace5893f3a5d541ce109ab64f",
+      "sha256": "68aa4a8cfd1b258dbd729e60747224821b5110da700fd8d2d40fa3ae28add349",
+      "size": [
+        128,
+        128
+      ],
+      "crop": [
+        0,
+        0,
+        128,
+        128
+      ]
+    },
     "Answers.png": {
       "source": "Payload/vkclient.app/left_answers.png",
       "source_sha256": "ce6dad3dae51219a6612514e59f3cc6f108ebd967da5a23eb2f6c8fe0df6628b",

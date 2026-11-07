@@ -22,12 +22,12 @@ void OVKConfigureEdges(UIViewController *controller) {
 }
 void OVKStyleNavigation(UINavigationController *nav) {
     nav.navigationBar.tintColor = OVKBlue(); nav.navigationBar.translucent = NO;
-    UIImage *button = [OVKThemeChrome(@"NavButton") resizableImageWithCapInsets:UIEdgeInsetsMake(6,8,6,8)];
-    UIImage *pressed = [OVKThemeChrome(@"NavButtonPressed") resizableImageWithCapInsets:UIEdgeInsetsMake(6,8,6,8)];
+    UIImage *button = OVKThemeStretch(@"NavButton");
+    UIImage *pressed = OVKThemeStretch(@"NavButtonPressed");
     [[UIBarButtonItem appearance] setBackgroundImage:button forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
     [[UIBarButtonItem appearance] setBackgroundImage:pressed forState:UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
-    [[UIBarButtonItem appearance] setBackButtonBackgroundImage:[OVKThemeChrome(@"BackButton") resizableImageWithCapInsets:UIEdgeInsetsMake(6,14,6,8)] forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
-    [[UIBarButtonItem appearance] setBackButtonBackgroundImage:[OVKThemeChrome(@"BackButtonPressed") resizableImageWithCapInsets:UIEdgeInsetsMake(6,14,6,8)] forState:UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
+    [[UIBarButtonItem appearance] setBackButtonBackgroundImage:OVKThemeStretch(@"BackButton") forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+    [[UIBarButtonItem appearance] setBackButtonBackgroundImage:OVKThemeStretch(@"BackButtonPressed") forState:UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
     [[UIBarButtonItem appearance] setTitleTextAttributes:@{UITextAttributeTextColor:[UIColor whiteColor],UITextAttributeTextShadowColor:[UIColor colorWithWhite:0 alpha:.55],UITextAttributeTextShadowOffset:[NSValue valueWithUIOffset:UIOffsetMake(0,-1)],UITextAttributeFont:[UIFont boldSystemFontOfSize:12]} forState:UIControlStateNormal];
     [nav.navigationBar setBackgroundImage:OVKThemeChrome(@"Navigation") forBarMetrics:UIBarMetricsDefault];
     for (UIViewController *page in nav.viewControllers) {
@@ -118,6 +118,10 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 @property (assign, nonatomic) BOOL postStyle;
 @property (assign, nonatomic) BOOL dialogStyle;
 @property (assign, nonatomic) BOOL activeDialog;
+@property (copy, nonatomic) NSString *measuredText;
+@property (assign, nonatomic) CGFloat measuredWidth;
+@property (assign, nonatomic) CGFloat measuredFontSize;
+@property (assign, nonatomic) CGSize measuredBodySize;
 @property (assign, nonatomic) BOOL unread;
 @property (assign, nonatomic) BOOL chatStyle;
 @property (assign, nonatomic) BOOL outgoing;
@@ -150,7 +154,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
         self.likeButton=[UIButton buttonWithType:UIButtonTypeCustom]; [self.likeButton addTarget:self action:@selector(tapLike) forControlEvents:UIControlEventTouchUpInside]; [self.contentView addSubview:self.likeButton];
         self.stamp = [[UILabel alloc] init]; self.stamp.font = [UIFont systemFontOfSize:11]; self.stamp.textColor = [UIColor grayColor];
         for (UIView *v in @[self.avatar,self.heading,self.bodyLabel,self.stamp,self.photo]) [self.contentView addSubview:v];
-        self.selectionStyle = UITableViewCellSelectionStyleBlue; self.backgroundView = [[UIImageView alloc] initWithImage:[[UIImage imageNamed:@"CellPanel"] resizableImageWithCapInsets:UIEdgeInsetsMake(3,0,3,0)]]; self.heading.backgroundColor = [UIColor clearColor]; self.bodyLabel.backgroundColor = [UIColor clearColor]; self.stamp.backgroundColor = [UIColor clearColor];
+        self.selectionStyle = UITableViewCellSelectionStyleBlue; self.backgroundView = [[UIImageView alloc] initWithImage:OVKThemeStretch(@"CellPanel")]; self.heading.backgroundColor = [UIColor clearColor]; self.bodyLabel.backgroundColor = [UIColor clearColor]; self.stamp.backgroundColor = [UIColor clearColor];
     }
     return self;
 }
@@ -166,11 +170,11 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     self.bodyLabel.textColor=OVKThemeText(); self.stamp.textColor=OVKThemeSecondary(); self.heading.textColor=OVKThemeAccent();
     self.contentView.opaque=!self.chatStyle; self.postHeader.opaque=YES; self.postFooter.opaque=YES;
     self.contentView.backgroundColor=self.chatStyle ? [UIColor clearColor] : OVKThemeSurface();
-    self.postHeader.backgroundColor=OVKDarkTheme() ? [UIColor colorWithRed:.18 green:.21 blue:.25 alpha:1] : [UIColor colorWithPatternImage:[UIImage imageNamed:@"PostHeader"]];
-    self.postFooter.backgroundColor=OVKDarkTheme() ? [UIColor colorWithRed:.13 green:.15 blue:.18 alpha:1] : [UIColor colorWithRed:.96 green:.97 blue:.98 alpha:1];
+    self.postHeader.backgroundColor=OVKPostHeaderColor();
+    self.postFooter.backgroundColor=OVKPostFooterColor();
     self.metrics.textColor=OVKThemeSecondary(); self.likes.textColor=OVKThemeAccent();
     self.postHeader.hidden=!self.postStyle; self.postFooter.hidden=!self.postStyle; self.commentButton.hidden=!self.postStyle;
-    self.postHeader.frame=CGRectMake(0,0,width,50); self.postFooter.frame=CGRectMake(0,height-48,width,48);
+    self.postHeader.frame=CGRectMake(0,0,width,54); self.postFooter.frame=CGRectMake(0,height-48,width,48);
     for (NSUInteger index=0;index<self.extraPhotos.count;index++) { UIImageView *image=self.extraPhotos[index]; image.hidden=!self.postStyle || self.photoCount<index+2; }
     self.morePhotos.hidden=!self.postStyle || self.photoCount<=3;
     self.bubble.hidden = !self.chatStyle; self.metrics.hidden = !self.postStyle; self.likes.hidden = !self.postStyle; self.likeButton.hidden=!self.postStyle; self.likeIcon.hidden=!self.postStyle; self.likeIcon.image=OVKThemeIcon(self.liked ? @"PostLikeActive" : @"PostLike");
@@ -185,10 +189,15 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
         self.photo.hidden=YES;
     } else if (self.chatStyle) {
         CGFloat maxWidth = width-76;
-        CGSize bodySize = [self.bodyLabel.text sizeWithFont:self.bodyLabel.font constrainedToSize:CGSizeMake(maxWidth-22,20000) lineBreakMode:NSLineBreakByWordWrapping];
+        CGFloat textWidth=maxWidth-22;
+        if (self.measuredWidth!=textWidth || self.measuredFontSize!=self.bodyLabel.font.pointSize || ![self.measuredText isEqualToString:self.bodyLabel.text]) {
+            self.measuredText=self.bodyLabel.text; self.measuredWidth=textWidth; self.measuredFontSize=self.bodyLabel.font.pointSize;
+            self.measuredBodySize=[self.bodyLabel.text sizeWithFont:self.bodyLabel.font constrainedToSize:CGSizeMake(textWidth,20000) lineBreakMode:NSLineBreakByWordWrapping];
+        }
+        CGSize bodySize=self.measuredBodySize;
         CGFloat bubbleWidth = self.photo.hidden ? MIN(maxWidth,MAX(115,ceil(bodySize.width)+22)) : maxWidth;
         CGFloat x = self.outgoing ? width-bubbleWidth-10 : 48;
-        self.bubble.image = [OVKThemeChrome(self.outgoing ? @"BubbleOutgoing" : @"BubbleIncoming") resizableImageWithCapInsets:UIEdgeInsetsMake(15,18,15,18)];
+        self.bubble.image = OVKThemeStretch(self.outgoing ? @"BubbleOutgoing" : @"BubbleIncoming");
         self.bubble.frame = CGRectMake(x,6,bubbleWidth,height-12);
         self.avatar.frame = CGRectMake(8,MAX(6,height-38),30,30);
         self.bodyLabel.frame = CGRectMake(x+11,14,bubbleWidth-22,ceil(bodySize.height));
@@ -198,14 +207,14 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
         self.stamp.textAlignment=NSTextAlignmentLeft;
         self.avatar.frame = CGRectMake(8,7,36,36); self.heading.frame = CGRectMake(53,6,width-63,21);
         self.stamp.frame = CGRectMake(53,28,width-63,15);
-        self.bodyLabel.frame = CGRectMake(8,56,width-16,MAX(20,height-112-photoHeight));
+        self.bodyLabel.frame = CGRectMake(8,60,width-16,MAX(20,height-116-photoHeight));
         CGFloat y=height-52-photoHeight; self.photo.frame=CGRectMake(0,y,width,photoHeight); self.photo.contentMode=self.photoCount>1 ? UIViewContentModeScaleAspectFill : UIViewContentModeScaleAspectFit;
         OVKPhotoRect frames[3]; unsigned visible=OVKFeedPhotoLayout((unsigned)self.photoCount,width,photoHeight,frames);
         NSArray *images=@[self.photo,self.extraPhotos[0],self.extraPhotos[1]];
         for (unsigned index=0;index<visible;index++) { UIView *image=images[index]; OVKPhotoRect frame=frames[index]; image.frame=CGRectMake(frame.x,y+frame.y,frame.width,frame.height); }
         if (visible==3) self.morePhotos.frame=((UIView *)self.extraPhotos[1]).frame;
         self.commentButton.frame=CGRectMake(8,height-42,MAX(120,width-112),33);
-        [self.commentButton setBackgroundImage:[OVKThemeChrome(@"FooterButton") resizableImageWithCapInsets:UIEdgeInsetsMake(5,7,5,7)] forState:UIControlStateNormal];
+        OVKStyleAssetButton(self.commentButton,@"FooterButton");
         [self.commentButton setTitleColor:OVKThemeAccent() forState:UIControlStateNormal]; self.commentButton.titleLabel.font=[UIFont boldSystemFontOfSize:12]; [self.commentButton setTitle:self.metrics.text forState:UIControlStateNormal]; [self.commentButton setImage:OVKThemeIcon(@"PostComment") forState:UIControlStateNormal]; self.commentButton.imageEdgeInsets=UIEdgeInsetsMake(0,-4,0,4);
         self.metrics.hidden=YES; self.likes.font=[UIFont boldSystemFontOfSize:13]; self.likeIcon.alpha=(self.liked ? 1 : .65)*(self.likeButton.enabled ? 1 : .35); self.likes.textColor=self.liked ? OVKThemeAccent() : OVKThemeSecondary(); self.likeButton.frame=CGRectMake(width-100,height-48,100,48); self.likeButton.accessibilityLabel=self.liked ? OVKL(@"Убрать отметку «Нравится»") : OVKL(@"Нравится"); self.likeIcon.frame=CGRectMake(width-91,height-33,16,16); self.likes.frame=CGRectMake(width-70,height-42,58,34);
     } else {
@@ -290,7 +299,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     if ([self isChat]) { self.tableView.separatorStyle=UITableViewCellSeparatorStyleNone; self.tableView.backgroundColor=[UIColor colorWithRed:.88 green:.91 blue:.94 alpha:1]; }
     self.refreshControl = [[UIRefreshControl alloc] init]; [self.tableView addSubview:self.refreshControl]; [self.refreshControl addTarget:self action:@selector(refresh) forControlEvents:UIControlEventValueChanged];
     self.notice = [[UILabel alloc] initWithFrame:CGRectMake(0,0,320,45)]; self.notice.numberOfLines = 0; self.notice.textAlignment = NSTextAlignmentCenter; self.notice.font = [UIFont systemFontOfSize:12]; self.notice.textColor = [UIColor grayColor]; self.notice.backgroundColor = [UIColor colorWithPatternImage:[UIImage imageNamed:@"SectionBar"]]; self.notice.shadowColor = [UIColor whiteColor]; self.notice.shadowOffset = CGSizeMake(0,1); self.tableView.tableHeaderView = self.notice;
-    self.footer = [UIButton buttonWithType:UIButtonTypeCustom]; self.footer.frame = CGRectMake(0,8,180,33); self.footer.titleLabel.font = [UIFont boldSystemFontOfSize:13]; [self.footer setTitleColor:OVKBlue() forState:UIControlStateNormal]; [self.footer addTarget:self action:@selector(loadMore) forControlEvents:UIControlEventTouchUpInside]; [self.footer setBackgroundImage:[[UIImage imageNamed:@"FooterButton"] resizableImageWithCapInsets:UIEdgeInsetsMake(15,7,15,7)] forState:UIControlStateNormal]; self.footerContainer=[[UIView alloc] initWithFrame:CGRectMake(0,0,self.tableView.bounds.size.width,50)]; [self.footerContainer addSubview:self.footer]; self.tableView.tableFooterView = self.footerContainer;
+    self.footer = [UIButton buttonWithType:UIButtonTypeCustom]; self.footer.frame = CGRectMake(0,8,180,33); self.footer.titleLabel.font = [UIFont boldSystemFontOfSize:13]; [self.footer setTitleColor:OVKBlue() forState:UIControlStateNormal]; [self.footer addTarget:self action:@selector(loadMore) forControlEvents:UIControlEventTouchUpInside]; OVKStyleAssetButton(self.footer,@"FooterButton"); self.footerContainer=[[UIView alloc] initWithFrame:CGRectMake(0,0,self.tableView.bounds.size.width,50)]; [self.footerContainer addSubview:self.footer]; self.tableView.tableFooterView = self.footerContainer;
     if ([self.mode isEqualToString:@"news"] || ([self isProfile] && [self.identifier isEqual:[OVKAPI shared].userID])) self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCompose target:self action:@selector(compose)];
     if ([self.mode isEqualToString:@"dialogs"]) { self.search=[[UISearchBar alloc] initWithFrame:CGRectMake(0,0,self.view.bounds.size.width,44)]; self.search.placeholder=OVKL(@"Поиск диалогов"); self.search.delegate=self; self.search.tintColor=[UIColor colorWithRed:.74 green:.78 blue:.81 alpha:1]; UIView *header=[[UIView alloc] initWithFrame:CGRectMake(0,0,self.view.bounds.size.width,68)]; self.search.autoresizingMask=UIViewAutoresizingFlexibleWidth; [header addSubview:self.search]; self.notice.frame=CGRectMake(0,44,header.bounds.size.width,24); self.notice.autoresizingMask=UIViewAutoresizingFlexibleWidth; [header addSubview:self.notice]; self.tableView.tableHeaderView=header; }
     if ([self isChat]) {
@@ -321,12 +330,12 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     OVKThemeTable(self.tableView); if ([self isChat] && !OVKDarkTheme()) self.tableView.backgroundColor=[UIColor colorWithRed:.88 green:.91 blue:.94 alpha:1];
     self.notice.backgroundColor=OVKDarkTheme() ? OVKThemeSurface() : [UIColor colorWithPatternImage:[UIImage imageNamed:@"SectionBar"]]; self.notice.textColor=OVKThemeSecondary(); self.notice.shadowColor=OVKDarkTheme() ? nil : [UIColor whiteColor];
     OVKThemeButtons(self.view);
-    self.composerBar.backgroundColor=[UIColor colorWithPatternImage:OVKThemeChrome(@"MessageBar")]; self.messageField.borderStyle=UITextBorderStyleNone; self.messageField.background=[OVKThemeChrome(@"MessageField") resizableImageWithCapInsets:UIEdgeInsetsMake(15,17,15,17)]; self.messageField.backgroundColor=[UIColor clearColor];
+    self.composerBar.backgroundColor=[UIColor colorWithPatternImage:OVKThemeChrome(@"MessageBar")]; self.messageField.borderStyle=UITextBorderStyleNone; self.messageField.background=OVKThemeStretch(@"MessageField"); self.messageField.backgroundColor=[UIColor clearColor];
     UIView *padding=[[UIView alloc] initWithFrame:CGRectMake(0,0,10,1)]; self.messageField.leftView=padding; self.messageField.leftViewMode=UITextFieldViewModeAlways;
-    [self.sendButton setBackgroundImage:[OVKThemeChrome(@"SendButton") resizableImageWithCapInsets:UIEdgeInsetsMake(10,20,10,20)] forState:UIControlStateNormal]; [self.sendButton setBackgroundImage:[OVKThemeChrome(@"SendButtonPressed") resizableImageWithCapInsets:UIEdgeInsetsMake(10,20,10,20)] forState:UIControlStateHighlighted]; [self.sendButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal]; self.messageField.textColor=OVKThemeText(); self.messageField.keyboardAppearance=OVKDarkTheme() ? UIKeyboardAppearanceAlert : UIKeyboardAppearanceDefault;
+    OVKStyleAssetButton(self.sendButton,@"SendButton"); [self.sendButton setBackgroundImage:OVKThemeStretch(@"SendButtonPressed") forState:UIControlStateHighlighted]; [self.sendButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal]; self.messageField.textColor=OVKThemeText(); self.messageField.keyboardAppearance=OVKDarkTheme() ? UIKeyboardAppearanceAlert : UIKeyboardAppearanceDefault;
     self.search.tintColor=OVKDarkTheme() ? [UIColor colorWithWhite:.2 alpha:1] : [UIColor colorWithRed:.74 green:.78 blue:.81 alpha:1];
     self.profileTabs.tintColor=OVKThemeAccent();
-    [self.footer setBackgroundImage:[OVKThemeChrome(@"FooterButton") resizableImageWithCapInsets:UIEdgeInsetsMake(15,7,15,7)] forState:UIControlStateNormal]; [self.footer setTitleColor:OVKThemeAccent() forState:UIControlStateNormal];
+    OVKStyleAssetButton(self.footer,@"FooterButton"); [self.footer setTitleColor:OVKThemeAccent() forState:UIControlStateNormal];
 }
 - (void)themeChanged:(NSNotification *)note { [self applyTheme]; [self.tableView reloadData]; if ([self isProfile]) [self updateProfileHeader]; }
 - (void)didReceiveMemoryWarning { [super didReceiveMemoryWarning]; [self.rowHeights removeAllObjects]; }
@@ -407,9 +416,9 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 }
 - (void)updateProfileHeader {
     if (!self.user.count) return;
-    CGFloat width=self.tableView.bounds.size.width, photoHeight=self.profilePhotos.count ? 66 : 0, filterY=232+photoHeight;
+    CGFloat width=self.tableView.bounds.size.width, photoHeight=self.profilePhotos.count ? 66 : 0, filterY=244+photoHeight;
     UIView *header=[[UIView alloc] initWithFrame:CGRectMake(0,0,width,filterY+36)];
-    UIImageView *background=[[UIImageView alloc] initWithImage:[UIImage imageNamed:@"ProfilePanel"]]; background.frame=header.bounds; background.autoresizingMask=UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight; [header addSubview:background];
+    UIView *background=[[UIView alloc] initWithFrame:header.bounds]; background.backgroundColor=OVKProfilePanelColor(); background.autoresizingMask=UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight; [header addSubview:background];
     OVKRemoteImageView *avatar=[[OVKRemoteImageView alloc] initWithFrame:CGRectMake(8,10,80,80)]; avatar.contentMode=UIViewContentModeScaleAspectFill; avatar.clipsToBounds=YES; avatar.layer.borderWidth=1; avatar.layer.borderColor=[UIColor colorWithWhite:0 alpha:.45].CGColor; [avatar load:OVKString(self.user[@"photo_200"] ?: self.user[@"photo_100"])]; avatar.userInteractionEnabled=YES; [avatar addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(openProfilePhoto)]]; [header addSubview:avatar];
     UILabel *name=[[UILabel alloc] initWithFrame:CGRectMake(100,10,width-110,38)]; name.text=[OVKName(self.user) stringByAppendingString:[OVKString(self.user[@"verified"]) boolValue] ? @" ✓" : @""]; name.numberOfLines=2; name.font=[UIFont boldSystemFontOfSize:16]; name.textColor=[UIColor whiteColor]; name.backgroundColor=[UIColor clearColor]; name.shadowColor=[UIColor blackColor]; name.shadowOffset=CGSizeMake(0,-1); [header addSubview:name];
     UILabel *status=[[UILabel alloc] initWithFrame:CGRectMake(100,50,width-110,40)]; status.numberOfLines=3; status.font=[UIFont systemFontOfSize:11]; status.textColor=[UIColor colorWithRed:.7 green:.75 blue:.8 alpha:1]; status.backgroundColor=[UIColor clearColor]; NSString *city=OVKString(OVKDictionary(self.user[@"city"])[@"title"]); status.text=[NSString stringWithFormat:@"%@%@%@\n%@",[OVKString(self.user[@"online"]) boolValue] ? OVKL(@"В сети") : OVKL(@"Не в сети"),city.length ? @" · " : @"",city,OVKString(self.user[@"status"])]; [header addSubview:status];
@@ -418,7 +427,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     BOOL own=[self.identifier isEqual:[OVKAPI shared].userID]; CGFloat buttonWidth=own ? width-16 : (width-20)/2;
     for (NSUInteger i=0;i<(own ? 1 : 2);i++) {
         UIButton *button=[UIButton buttonWithType:UIButtonTypeCustom]; button.frame=CGRectMake(8+i*(buttonWidth+4),100,buttonWidth,33);
-        [button setBackgroundImage:[OVKThemeChrome(i==0 ? @"ProfileBlueButton" : @"FooterButton") resizableImageWithCapInsets:UIEdgeInsetsMake(5,7,5,7)] forState:UIControlStateNormal];
+        OVKStyleAssetButton(button,i==0 ? @"ProfileBlueButton" : @"FooterButton");
         [button setTitle:i==0 ? (own ? OVKL(@"Новая запись") : OVKL(@"Сообщение")) : [self friendshipTitle] forState:UIControlStateNormal]; [button setTitleColor:i==0 ? [UIColor whiteColor] : (OVKDarkTheme() ? OVKThemeText() : [UIColor colorWithRed:.25 green:.31 blue:.38 alpha:1]) forState:UIControlStateNormal]; button.titleLabel.font=[UIFont boldSystemFontOfSize:12];
         [button addTarget:self action:i==0 ? (own ? @selector(compose) : @selector(openChat)) : @selector(friendshipTapped) forControlEvents:UIControlEventTouchUpInside];
         if (i==1) { button.enabled=!self.friendshipLoading && !self.friendshipChanging && self.friendshipStatus!=1 && self.friendshipStatus!=3; button.alpha=button.enabled ? 1 : .75; button.accessibilityLabel=[self friendshipTitle]; } [header addSubview:button];
@@ -426,15 +435,15 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     NSDictionary *counters=OVKDictionary(self.user[@"counters"]); NSArray *keys=@[@"friends",@"mutual_friends",@"followers",@"photos",@"videos",@"audios"];
     NSArray *titles=@[OVKL(@"ДРУЗЬЯ"),OVKL(@"ОБЩИЕ"),OVKL(@"ПОДПИСЧИКИ"),OVKL(@"ФОТОГРАФИИ"),OVKL(@"ВИДЕО"),OVKL(@"АУДИО")];
     for (NSUInteger i=0;i<6;i++) {
-        CGFloat tileWidth=(width-26)/3; CGRect frame=CGRectMake(8+(i%3)*(tileWidth+5),138+(i/3)*45,tileWidth,40);
-        UIImageView *tile=[[UIImageView alloc] initWithImage:[[UIImage imageNamed:@"ProfileCounter"] resizableImageWithCapInsets:UIEdgeInsetsMake(3,3,3,3)]]; tile.frame=frame; [header addSubview:tile];
+        CGFloat tileWidth=(width-26)/3; CGRect frame=CGRectMake(8+(i%3)*(tileWidth+5),138+(i/3)*51,tileWidth,46);
+        UIImageView *tile=[[UIImageView alloc] initWithImage:OVKThemeStretch(@"ProfileCounter")]; tile.frame=frame; [header addSubview:tile];
         id value=counters[keys[i]]; if (i==1 && ![value respondsToSelector:@selector(integerValue)]) value=self.user[@"common_count"];
-        UILabel *count=[[UILabel alloc] initWithFrame:CGRectMake(0,1,tileWidth,23)]; count.text=[value respondsToSelector:@selector(integerValue)] ? [NSString stringWithFormat:@"%ld",(long)[value integerValue]] : @"—"; count.font=[UIFont boldSystemFontOfSize:18]; count.textAlignment=NSTextAlignmentCenter; count.textColor=[UIColor colorWithWhite:.87 alpha:1]; count.backgroundColor=[UIColor clearColor]; [tile addSubview:count];
-        UILabel *label=[[UILabel alloc] initWithFrame:CGRectMake(0,25,tileWidth,12)]; label.text=titles[i]; label.font=[UIFont boldSystemFontOfSize:8]; label.textColor=[UIColor colorWithWhite:.58 alpha:1]; label.textAlignment=NSTextAlignmentCenter; label.backgroundColor=[UIColor clearColor]; [tile addSubview:label];
+        UILabel *count=[[UILabel alloc] initWithFrame:CGRectMake(0,3,tileWidth,23)]; count.text=[value respondsToSelector:@selector(integerValue)] ? [NSString stringWithFormat:@"%ld",(long)[value integerValue]] : @"—"; count.font=[UIFont boldSystemFontOfSize:18]; count.textAlignment=NSTextAlignmentCenter; count.textColor=[UIColor colorWithWhite:.87 alpha:1]; count.backgroundColor=[UIColor clearColor]; [tile addSubview:count];
+        UILabel *label=[[UILabel alloc] initWithFrame:CGRectMake(0,27,tileWidth,12)]; label.text=titles[i]; label.font=[UIFont boldSystemFontOfSize:8]; label.textColor=[UIColor colorWithWhite:.58 alpha:1]; label.textAlignment=NSTextAlignmentCenter; label.backgroundColor=[UIColor clearColor]; [tile addSubview:label];
         if (i>=3 || i==0) { UIButton *tap=[UIButton buttonWithType:UIButtonTypeCustom]; tap.frame=frame; tap.tag=i-1; tap.accessibilityLabel=titles[i]; [tap addTarget:self action:i==0 ? @selector(openProfileFriends) : @selector(openProfileLibrary:) forControlEvents:UIControlEventTouchUpInside]; [header addSubview:tap]; }
     }
     if (photoHeight) for (NSUInteger i=0;i<MIN((NSUInteger)4,self.profilePhotos.count);i++) {
-        CGFloat size=(width-28)/4; CGRect frame=CGRectMake(8+i*(size+4),234,size,58);
+        CGFloat size=(width-28)/4; CGRect frame=CGRectMake(8+i*(size+4),246,size,58);
         OVKRemoteImageView *photo=[[OVKRemoteImageView alloc] initWithFrame:frame]; photo.contentMode=UIViewContentModeScaleAspectFill; photo.clipsToBounds=YES; [photo load:self.profilePhotos[i][@"preview"]]; [header addSubview:photo];
         UIButton *tap=[UIButton buttonWithType:UIButtonTypeCustom]; tap.frame=frame; tap.tag=i; tap.accessibilityLabel=OVKL(@"Фотография"); [tap addTarget:self action:@selector(profilePhotoTapped:) forControlEvents:UIControlEventTouchUpInside]; [header addSubview:tap];
     }
@@ -566,7 +575,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     CGFloat textWidth=tableView.bounds.size.width-([self isChat] ? 98 : ([self isFeed] ? 16 : 78));
     CGSize size = [text sizeWithFont:[UIFont systemFontOfSize:[self isFeed] ? OVKFeedTextSize() : 14] constrainedToSize:CGSizeMake(MAX(100,textWidth),([self isPost] || [self isChat]) ? 20000 : 110) lineBreakMode:NSLineBreakByWordWrapping];
     CGFloat imageHeight=OVKPostPhotoHeight([self postAt:indexPath.row],tableView.bounds.size.width-([self isChat] ? 92 : ([self isFeed] ? 0 : 94)),[self isFeed]);
-    CGFloat height=[self isChat] ? MAX(62,ceil(size.height)+48+imageHeight) : MAX(86,ceil(size.height)+([self isFeed] ? 112 : 62))+imageHeight;
+    CGFloat height=[self isChat] ? MAX(62,ceil(size.height)+48+imageHeight) : MAX(86,ceil(size.height)+([self isFeed] ? 116 : 62))+imageHeight;
     self.rowHeights[row]=@{@"post":post,@"width":@(tableView.bounds.size.width),@"height":@(height)}; return height;
 }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -576,7 +585,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     NSDictionary *item = [self postAt:indexPath.row];
     NSString *photoURL = OVKPhotoURL(item); cell.photoDisplayHeight=OVKPostPhotoHeight(item,tableView.bounds.size.width-([self isChat] ? 92 : ([self isFeed] ? 0 : 94)),[self isFeed]); cell.photo.hidden = !photoURL.length; if (photoURL.length) [cell.photo load:photoURL];
     NSArray *photos=OVKPostPhotos(item); cell.photoCount=photos.count;
-    for (NSUInteger index=0;index<cell.extraPhotos.count;index++) { OVKRemoteImageView *image=cell.extraPhotos[index]; if (index+1<photos.count) [image load:photos[index+1][@"preview"] ?: photos[index+1][@"url"]]; else [image load:@""]; }
+    for (NSUInteger index=0;index<cell.extraPhotos.count;index++) { OVKRemoteImageView *image=cell.extraPhotos[index]; if ([self isFeed] && index+1<photos.count) [image load:photos[index+1][@"preview"] ?: photos[index+1][@"url"]]; else [image load:@""]; }
     cell.morePhotos.text=photos.count>3 ? [NSString stringWithFormat:@"+%lu",(unsigned long)(photos.count-3)] : @"";
     cell.activeDialog=self.dialogSelected && [self.selectedDialogPeer isEqualToString:OVKString(OVKDictionary(OVKDictionary(item[@"conversation"])[@"peer"])[@"id"])]; cell.dialogStyle=[self.mode isEqualToString:@"dialogs"]; cell.unread=[OVKDictionary(item[@"conversation"])[@"unread_count"] integerValue]>0;
     cell.chatStyle = [self isChat]; cell.outgoing = [item[@"out"] boolValue] || [OVKString(item[@"from_id"]) isEqualToString:OVKString([OVKAPI shared].userID)]; cell.postStyle = [self isFeed]; cell.bodyLabel.font=[UIFont systemFontOfSize:[self isFeed] ? OVKFeedTextSize() : 14]; cell.heading.text = [self headingFor:item]; cell.bodyLabel.text = [self bodyFor:item];

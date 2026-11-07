@@ -6,9 +6,18 @@
 #import "OVKMedia.h"
 #import "OVKMusic.h"
 #import <QuartzCore/QuartzCore.h>
+#import <math.h>
 static UIImage *OVKMenuGlyph(void) {
-    UIImage *source=[UIImage imageNamed:@"Menu"]; UIGraphicsBeginImageContextWithOptions(source.size,NO,source.scale); [source drawAtPoint:CGPointZero]; [[UIColor whiteColor] setFill]; UIRectFillUsingBlendMode((CGRect){CGPointZero,source.size},kCGBlendModeSourceIn); UIImage *image=UIGraphicsGetImageFromCurrentImageContext(); UIGraphicsEndImageContext(); return image;
+    static UIImage *image; static dispatch_once_t once; dispatch_once(&once, ^{
+        UIImage *source=[UIImage imageNamed:@"Menu"]; UIGraphicsBeginImageContextWithOptions(source.size,NO,source.scale); [source drawAtPoint:CGPointZero]; [[UIColor whiteColor] setFill]; UIRectFillUsingBlendMode((CGRect){CGPointZero,source.size},kCGBlendModeSourceIn); image=UIGraphicsGetImageFromCurrentImageContext(); UIGraphicsEndImageContext();
+    }); return image;
 }
+@interface OVKSidebarCell : UITableViewCell
+@property (assign, nonatomic) BOOL compact;
+@end
+@implementation OVKSidebarCell
+- (void)layoutSubviews { [super layoutSubviews]; CGFloat scale=[[UIScreen mainScreen] scale],x=self.compact ? (self.bounds.size.width-31)/2 : 10.5,y=(self.bounds.size.height-31)/2; self.imageView.contentMode=UIViewContentModeScaleAspectFit; self.imageView.frame=CGRectMake(round(x*scale)/scale,round(y*scale)/scale,31,31); self.textLabel.frame=CGRectMake(50,0,MAX(0,self.bounds.size.width-58),self.bounds.size.height); }
+@end
 @interface OVKAppearanceController : UITableViewController
 @end
 @implementation OVKAppearanceController
@@ -79,6 +88,7 @@ static UIImage *OVKMenuGlyph(void) {
 - (void)alertView:(UIAlertView *)alert clickedButtonAtIndex:(NSInteger)index { if (index == 1) [[OVKAPI shared] logout]; }
 @end
 @interface OVKRootController () <UITableViewDataSource,UITableViewDelegate>
+@property (strong, nonatomic) NSArray *menuModesCache;
 @property (strong, nonatomic) UITableView *menu;
 @property (strong, nonatomic) NSMutableDictionary *sections;
 @property (strong, nonatomic) UINavigationController *active;
@@ -94,7 +104,7 @@ static UIImage *OVKMenuGlyph(void) {
 - (void)viewDidLoad {
     [super viewDidLoad]; self.sections = [NSMutableDictionary dictionary]; self.view.backgroundColor = [UIColor colorWithPatternImage:[UIImage imageNamed:@"SidebarTexture"]]; self.view.clipsToBounds = YES;
     OVKConfigureEdges(self);
-    self.menu = [[UITableView alloc] initWithFrame:CGRectMake(0,0,[self menuWidth],self.view.bounds.size.height) style:UITableViewStylePlain]; self.menu.autoresizingMask = UIViewAutoresizingFlexibleHeight; self.menu.backgroundColor = self.view.backgroundColor; self.menu.separatorColor = [UIColor colorWithWhite:0 alpha:.25]; self.menu.dataSource = self; self.menu.delegate = self; self.menu.rowHeight = 45; self.menu.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero]; [self.view addSubview:self.menu];
+    self.menu = [[UITableView alloc] initWithFrame:CGRectMake(0,0,[self menuWidth],self.view.bounds.size.height) style:UITableViewStylePlain]; self.menu.autoresizingMask = UIViewAutoresizingFlexibleHeight; self.menu.backgroundColor = self.view.backgroundColor; self.menu.separatorColor = [UIColor colorWithWhite:0 alpha:.25]; self.menu.dataSource = self; self.menu.delegate = self; self.menu.rowHeight = 44; self.menu.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero]; [self.view addSubview:self.menu];
     UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0,0,[self menuWidth],86)];
     OVKRemoteImageView *avatar = [[OVKRemoteImageView alloc] initWithImage:[UIImage imageNamed:@"Avatar"]]; avatar.frame = CGRectMake(15,20,45,45); [header addSubview:avatar]; self.profileImage = avatar; avatar.contentMode = UIViewContentModeScaleAspectFill; avatar.clipsToBounds = YES;
     self.nameLabel = [[UILabel alloc] initWithFrame:CGRectMake(73,19,[self menuWidth]-85,25)]; self.nameLabel.backgroundColor = [UIColor clearColor]; self.nameLabel.textColor = [UIColor whiteColor]; self.nameLabel.font = [UIFont boldSystemFontOfSize:17]; self.nameLabel.text = OVKL(@"Моя страница"); [header addSubview:self.nameLabel];
@@ -116,26 +126,27 @@ static UIImage *OVKMenuGlyph(void) {
 }
 - (void)themeChanged:(NSNotification *)note {
     [self menuOrderChanged:nil];
-    for (NSString *mode in self.sections) { UINavigationController *nav=self.sections[mode]; OVKStyleNavigation(nav); UIViewController *root=[nav.viewControllers objectAtIndex:0]; UIButton *button=(UIButton *)root.navigationItem.leftBarButtonItem.customView; if ([button isKindOfClass:[UIButton class]]) { [button setBackgroundImage:[OVKThemeChrome(@"NavButton") resizableImageWithCapInsets:UIEdgeInsetsMake(6,8,6,8)] forState:UIControlStateNormal]; [button setBackgroundImage:[OVKThemeChrome(@"NavButtonPressed") resizableImageWithCapInsets:UIEdgeInsetsMake(6,8,6,8)] forState:UIControlStateHighlighted]; } }
+    for (NSString *mode in self.sections) { UINavigationController *nav=self.sections[mode]; OVKStyleNavigation(nav); UIViewController *root=[nav.viewControllers objectAtIndex:0]; UIButton *button=(UIButton *)root.navigationItem.leftBarButtonItem.customView; if ([button isKindOfClass:[UIButton class]]) { OVKStyleAssetButton(button,@"NavButton"); [button setBackgroundImage:OVKThemeStretch(@"NavButtonPressed") forState:UIControlStateHighlighted]; } }
 }
 - (void)languageChanged:(NSNotification *)note {
     [self.menu reloadData];
     // Keep navigation stacks and the current player alive when changing language.
     for (NSString *mode in self.sections) { UINavigationController *nav=self.sections[mode]; UIViewController *page=[nav.viewControllers objectAtIndex:0]; page.title=[self menuTitle:mode]; }
 }
-- (void)menuOrderChanged:(NSNotification *)note { [self.menu reloadData]; NSUInteger index=[[self menuModes] indexOfObject:self.selected]; if (index!=NSNotFound) [self.menu selectRowAtIndexPath:[NSIndexPath indexPathForRow:index inSection:0] animated:NO scrollPosition:UITableViewScrollPositionNone]; }
-- (NSArray *)menuModes { NSMutableArray *modes=[OVKMenuOrder() mutableCopy]; if (!OVKExperimentalVideo()) [modes removeObject:@"video"]; return modes; }
+- (void)menuOrderChanged:(NSNotification *)note { self.menuModesCache=nil; [self.menu reloadData]; NSUInteger index=[[self menuModes] indexOfObject:self.selected]; if (index!=NSNotFound) [self.menu selectRowAtIndexPath:[NSIndexPath indexPathForRow:index inSection:0] animated:NO scrollPosition:UITableViewScrollPositionNone]; }
+- (NSArray *)menuModes { if (self.menuModesCache) return self.menuModesCache; NSMutableArray *modes=[OVKMenuOrder() mutableCopy]; if (!OVKExperimentalVideo()) [modes removeObject:@"video"]; self.menuModesCache=[modes copy]; return self.menuModesCache; }
 - (NSString *)menuTitle:(NSString *)mode { return OVKMenuTitle(mode); }
 - (void)viewDidLayoutSubviews { [super viewDidLayoutSubviews]; BOOL pad=UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad; CGFloat side=pad ? [self menuWidth] : 0; self.menu.frame=CGRectMake(0,0,[self menuWidth],self.view.bounds.size.height); BOOL compact=pad && [self.selected isEqualToString:@"dialogs"]; self.nameLabel.hidden=compact; self.statusLabel.hidden=compact; self.profileImage.frame=CGRectMake(compact ? 9.5 : 15,20,45,45); CGAffineTransform transform=self.active.view.transform; self.active.view.transform=CGAffineTransformIdentity; self.active.view.frame=CGRectMake(side,0,self.view.bounds.size.width-side,self.view.bounds.size.height); self.active.view.transform=pad ? CGAffineTransformIdentity : transform; if (pad) { self.active.view.transform=CGAffineTransformIdentity; [self.cover removeFromSuperview]; self.cover=nil; self.opened=NO; } }
-- (void)experimentalChanged:(NSNotification *)note { [self.menu reloadData]; if ([self.selected isEqualToString:@"video"] && !OVKExperimentalVideo()) [self showSection:@"audio" title:OVKL(@"Музыка")]; }
+- (void)experimentalChanged:(NSNotification *)note { self.menuModesCache=nil; [self.menu reloadData]; if ([self.selected isEqualToString:@"video"] && !OVKExperimentalVideo()) [self showSection:@"audio" title:OVKL(@"Музыка")]; }
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return [self menuModes].count; }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)path {
-    UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    OVKSidebarCell *cell=(OVKSidebarCell *)[tableView dequeueReusableCellWithIdentifier:@"sidebar"];
+    if (!cell) { cell=[[OVKSidebarCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"sidebar"]; cell.backgroundView=[[UIImageView alloc] init]; cell.selectedBackgroundView=[[UIImageView alloc] init]; }
     NSString *mode=[self menuModes][path.row];
     NSString *icon=@{@"notifications":@"Answers",@"groups":@"Groups",@"friends":@"Friends",@"photo":@"PhotoMedia",@"dialogs":@"Messages",@"news":@"News",@"profile":@"Profile",@"audio":@"AudioMedia",@"video":@"VideoMedia",@"archive":@"News",@"settings":@"Settings"}[mode];
-    cell.textLabel.hidden=UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad && [self.selected isEqualToString:@"dialogs"]; cell.accessibilityLabel=[self menuTitle:mode];
+    cell.compact=UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad && [self.selected isEqualToString:@"dialogs"]; cell.textLabel.hidden=cell.compact; cell.accessibilityLabel=[self menuTitle:mode];
     cell.textLabel.text=[self menuTitle:mode]; cell.textLabel.font=[UIFont boldSystemFontOfSize:17]; cell.textLabel.textColor=[UIColor colorWithWhite:.83 alpha:1]; cell.textLabel.backgroundColor=[UIColor clearColor]; cell.textLabel.shadowColor=[UIColor blackColor]; cell.textLabel.shadowOffset=CGSizeMake(0,-1);
-    cell.imageView.image=[UIImage imageNamed:icon]; cell.backgroundView=[[UIImageView alloc] initWithImage:[UIImage imageNamed:@"MenuRow"]]; cell.selectedBackgroundView=[[UIImageView alloc] initWithImage:OVKThemeChrome(@"MenuSelected")]; cell.textLabel.highlightedTextColor=[UIColor whiteColor]; return cell;
+    cell.imageView.image=[UIImage imageNamed:icon]; ((UIImageView *)cell.backgroundView).image=OVKThemeStretch(@"MenuRow"); ((UIImageView *)cell.selectedBackgroundView).image=OVKThemeStretch(@"MenuSelected"); cell.textLabel.highlightedTextColor=[UIColor whiteColor]; return cell;
 }
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)path {
     NSString *mode=[self menuModes][path.row];
@@ -166,7 +177,7 @@ static UIImage *OVKMenuGlyph(void) {
     NSUInteger selectedRow = [menuModes indexOfObject:mode];
     if (selectedRow != NSNotFound) [self.menu selectRowAtIndexPath:[NSIndexPath indexPathForRow:selectedRow inSection:0] animated:NO scrollPosition:UITableViewScrollPositionNone];
     UIViewController *root = [nav.viewControllers objectAtIndex:0];
-    UIButton *menuButton = [UIButton buttonWithType:UIButtonTypeCustom]; menuButton.frame = CGRectMake(0,0,40,30); [menuButton setBackgroundImage:[OVKThemeChrome(@"NavButton") resizableImageWithCapInsets:UIEdgeInsetsMake(6,8,6,8)] forState:UIControlStateNormal]; [menuButton setBackgroundImage:[OVKThemeChrome(@"NavButtonPressed") resizableImageWithCapInsets:UIEdgeInsetsMake(6,8,6,8)] forState:UIControlStateHighlighted]; [menuButton setImage:OVKMenuGlyph() forState:UIControlStateNormal]; menuButton.accessibilityLabel = OVKL(@"Меню"); [menuButton addTarget:self action:@selector(toggleMenu) forControlEvents:UIControlEventTouchUpInside]; root.navigationItem.leftBarButtonItem = UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad ? nil : [[UIBarButtonItem alloc] initWithCustomView:menuButton];
+    UIButton *menuButton = [UIButton buttonWithType:UIButtonTypeCustom]; menuButton.frame = CGRectMake(0,0,40,30); OVKStyleAssetButton(menuButton,@"NavButton"); [menuButton setImage:OVKMenuGlyph() forState:UIControlStateNormal]; menuButton.accessibilityLabel = OVKL(@"Меню"); [menuButton addTarget:self action:@selector(toggleMenu) forControlEvents:UIControlEventTouchUpInside]; root.navigationItem.leftBarButtonItem = UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad ? nil : [[UIBarButtonItem alloc] initWithCustomView:menuButton];
 }
 - (void)swipeOpen { if (self.active.viewControllers.count == 1 && !self.opened) [self toggleMenu]; }
 - (void)toggleMenu {

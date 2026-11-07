@@ -24,3 +24,10 @@ void OVKClearThemeCaches(void);
 
 UIImage *OVKThemeLogo(void);
 void OVKRestoreDefaultApplicationIcon(void);
+
+UIImage *OVKThemeStretch(NSString *name);
+UIColor *OVKPostHeaderColor(void);
+UIColor *OVKPostFooterColor(void);
+
+UIColor *OVKProfilePanelColor(void);
+void OVKStyleAssetButton(UIButton *button, NSString *name);

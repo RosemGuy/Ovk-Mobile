@@ -1,6 +1,6 @@
 #import "OVKTheme.h"
-static NSCache *OVKChromeImages=nil,*OVKIconImages=nil;
-void OVKClearThemeCaches(void) { [OVKChromeImages removeAllObjects]; [OVKIconImages removeAllObjects]; }
+static NSCache *OVKChromeImages=nil,*OVKIconImages=nil,*OVKStretchedImages=nil;
+void OVKClearThemeCaches(void) { [OVKChromeImages removeAllObjects]; [OVKIconImages removeAllObjects]; [OVKStretchedImages removeAllObjects]; }
 static BOOL OVKDark;
 static NSString *OVKColor;
 NSArray *OVKThemeColors(void) { static NSArray *colors; static dispatch_once_t once; dispatch_once(&once, ^{ colors=@[@"blue",@"purple",@"red",@"green",@"orange",@"pink"]; }); return colors; }
@@ -29,12 +29,22 @@ UIImage *OVKThemeChrome(NSString *name) {
     if (OVKDarkTheme()) { CGFloat shade=([name hasPrefix:@"Bubble"] || [name hasPrefix:@"Message"] || [name hasPrefix:@"Footer"] || [name isEqualToString:@"SectionBar"]) ? .78 : .55; [[UIColor colorWithWhite:0 alpha:shade] setFill]; UIRectFillUsingBlendMode((CGRect){CGPointZero,original.size},kCGBlendModeSourceAtop); } UIImage *result=UIGraphicsGetImageFromCurrentImageContext(); UIGraphicsEndImageContext(); if (result) [images setObject:result forKey:cacheKey cost:CGImageGetWidth(result.CGImage)*CGImageGetHeight(result.CGImage)*4]; return result;
 }
 void OVKThemeTable(UITableView *table) { table.backgroundView=nil; table.backgroundColor=OVKThemeBackground(); table.separatorColor=OVKDarkTheme() ? [UIColor colorWithWhite:.26 alpha:1] : [UIColor colorWithWhite:.87 alpha:1]; }
-void OVKThemeCell(UITableViewCell *cell) { UIView *background=[[UIView alloc] initWithFrame:cell.bounds]; background.backgroundColor=OVKThemeSurface(); cell.backgroundView=background; cell.backgroundColor=OVKThemeSurface(); cell.textLabel.backgroundColor=[UIColor clearColor]; cell.detailTextLabel.backgroundColor=[UIColor clearColor]; cell.textLabel.textColor=OVKThemeText(); cell.detailTextLabel.textColor=OVKThemeSecondary(); if (cell.accessoryType==UITableViewCellAccessoryCheckmark) { UILabel *mark=[[UILabel alloc] initWithFrame:CGRectMake(0,0,24,24)]; mark.text=@"✓"; mark.textAlignment=NSTextAlignmentCenter; mark.font=[UIFont boldSystemFontOfSize:19]; mark.textColor=OVKThemeAccent(); mark.backgroundColor=[UIColor clearColor]; cell.accessoryView=mark; cell.accessibilityTraits|=UIAccessibilityTraitSelected; } }
+void OVKThemeCell(UITableViewCell *cell) {
+    UIView *background=cell.backgroundView;
+    if (!background || [background isKindOfClass:[UIImageView class]]) { background=[[UIView alloc] initWithFrame:cell.bounds]; cell.backgroundView=background; }
+    background.backgroundColor=OVKThemeSurface(); cell.backgroundColor=OVKThemeSurface();
+    cell.textLabel.backgroundColor=[UIColor clearColor]; cell.detailTextLabel.backgroundColor=[UIColor clearColor]; cell.textLabel.textColor=OVKThemeText(); cell.detailTextLabel.textColor=OVKThemeSecondary();
+    if (cell.accessoryType==UITableViewCellAccessoryCheckmark) {
+        UILabel *mark=cell.accessoryView.tag==7749 ? (UILabel *)cell.accessoryView : nil;
+        if (!mark) { mark=[[UILabel alloc] initWithFrame:CGRectMake(0,0,24,24)]; mark.tag=7749; mark.text=@"✓"; mark.textAlignment=NSTextAlignmentCenter; mark.font=[UIFont boldSystemFontOfSize:19]; mark.backgroundColor=[UIColor clearColor]; cell.accessoryView=mark; }
+        mark.textColor=OVKThemeAccent(); cell.accessibilityTraits|=UIAccessibilityTraitSelected;
+    } else if (cell.accessoryView.tag==7749) { cell.accessoryView=nil; cell.accessibilityTraits&=~UIAccessibilityTraitSelected; }
+}
 
 void OVKThemeButtons(UIView *view) {
     if ([view isKindOfClass:[UISegmentedControl class]]) ((UISegmentedControl *)view).tintColor=OVKThemeAccent();
     if ([view isKindOfClass:[UIButton class]]) { UIButton *button=(UIButton *)view;
-        if (button.buttonType==UIButtonTypeRoundedRect) { [button setBackgroundImage:[OVKThemeChrome(@"FooterButton") resizableImageWithCapInsets:UIEdgeInsetsMake(5,7,5,7)] forState:UIControlStateNormal]; [button setTitleColor:OVKThemeAccent() forState:UIControlStateNormal]; }
+        if (button.buttonType==UIButtonTypeRoundedRect) { OVKStyleAssetButton(button,@"FooterButton"); [button setTitleColor:OVKThemeAccent() forState:UIControlStateNormal]; }
     }
     for (UIView *child in view.subviews) OVKThemeButtons(child);
 }
@@ -68,4 +78,30 @@ void OVKRestoreDefaultApplicationIcon(void) {
     UIApplication *app=[UIApplication sharedApplication];
     if (![app respondsToSelector:@selector(alternateIconName)] || ![app respondsToSelector:@selector(setAlternateIconName:completionHandler:)] || !app.alternateIconName || app.applicationState!=UIApplicationStateActive) return;
     [app setAlternateIconName:nil completionHandler:^(NSError *error) { if (error) NSLog(@"Ovk-Mobile primary icon: %@",error.localizedDescription); }];
+}
+
+UIImage *OVKThemeStretch(NSString *name) {
+    static NSDictionary *caps; static dispatch_once_t once;
+    dispatch_once(&once, ^{ NSString *path=[[NSBundle mainBundle] pathForResource:@"ChromeCaps" ofType:@"json"]; NSData *data=path ? [NSData dataWithContentsOfFile:path] : nil; if (data) caps=[NSJSONSerialization JSONObjectWithData:data options:0 error:NULL]; OVKStretchedImages=[[NSCache alloc] init]; OVKStretchedImages.countLimit=64; });
+    UIImage *cached=[OVKStretchedImages objectForKey:name]; if (cached) return cached;
+    UIImage *image=OVKThemeChrome(name); if (!image) return nil;
+    NSArray *values=caps[name]; if (values.count!=4) return image;
+    UIEdgeInsets insets=UIEdgeInsetsMake([values[0] doubleValue],[values[1] doubleValue],[values[2] doubleValue],[values[3] doubleValue]);
+    if (insets.left+insets.right>=image.size.width || insets.top+insets.bottom>=image.size.height) return image;
+    UIImage *result=[image resizableImageWithCapInsets:insets]; [OVKStretchedImages setObject:result forKey:name]; return result;
+}
+UIColor *OVKPostHeaderColor(void) {
+    static UIColor *light,*dark; static dispatch_once_t once; dispatch_once(&once, ^{ light=[UIColor colorWithPatternImage:[UIImage imageNamed:@"PostHeader"]]; dark=[UIColor colorWithRed:.18 green:.21 blue:.25 alpha:1]; }); return OVKDarkTheme() ? dark : light;
+}
+UIColor *OVKPostFooterColor(void) {
+    static UIColor *light,*dark; static dispatch_once_t once; dispatch_once(&once, ^{ light=[UIColor colorWithRed:.96 green:.97 blue:.98 alpha:1]; dark=[UIColor colorWithRed:.13 green:.15 blue:.18 alpha:1]; }); return OVKDarkTheme() ? dark : light;
+}
+
+UIColor *OVKProfilePanelColor(void) {
+    static UIColor *panel; static dispatch_once_t once; dispatch_once(&once, ^{ panel=[UIColor colorWithPatternImage:[UIImage imageNamed:@"ProfilePanel"]]; }); return panel;
+}
+void OVKStyleAssetButton(UIButton *button, NSString *name) {
+    [button setBackgroundImage:OVKThemeStretch(name) forState:UIControlStateNormal];
+    NSString *pressed=[name stringByAppendingString:@"Pressed"];
+    if ([UIImage imageNamed:pressed]) [button setBackgroundImage:OVKThemeStretch(pressed) forState:UIControlStateHighlighted];
 }

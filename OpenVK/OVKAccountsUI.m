@@ -1,11 +1,15 @@
 #import "OVKUI.h"
 #import "OVKAPI.h"
+static NSArray *OVKCachedMenuOrder;
 NSArray *OVKMenuOrder(void) {
+    if (OVKCachedMenuOrder) return OVKCachedMenuOrder;
     NSArray *defaults=@[@"profile",@"news",@"notifications",@"dialogs",@"friends",@"groups",@"photo",@"audio",@"video",@"archive",@"settings"];
     NSMutableArray *result=[NSMutableArray array]; for (id saved in [[NSUserDefaults standardUserDefaults] arrayForKey:@"OVKMenuOrder"]) { id mode=[saved isEqual:@"web"] ? @"archive" : saved; if ([defaults containsObject:mode] && ![result containsObject:mode]) [result addObject:mode]; }
-    for (NSUInteger i=0;i<defaults.count;i++) { NSString *mode=defaults[i]; if ([result containsObject:mode]) continue; NSUInteger insertion=0; for (NSUInteger j=i;j>0;j--) { NSUInteger previous=[result indexOfObject:defaults[j-1]]; if (previous!=NSNotFound) { insertion=previous+1; break; } } [result insertObject:mode atIndex:insertion]; } return result;
+    for (NSUInteger i=0;i<defaults.count;i++) { NSString *mode=defaults[i]; if ([result containsObject:mode]) continue; NSUInteger insertion=0; for (NSUInteger j=i;j>0;j--) { NSUInteger previous=[result indexOfObject:defaults[j-1]]; if (previous!=NSNotFound) { insertion=previous+1; break; } } [result insertObject:mode atIndex:insertion]; } OVKCachedMenuOrder=[result copy]; return OVKCachedMenuOrder;
 }
-NSString *OVKMenuTitle(NSString *mode) { return @{@"notifications":OVKL(@"Ответы"),@"groups":OVKL(@"Группы"),@"friends":OVKL(@"Друзья"),@"photo":OVKL(@"Фотографии"),@"dialogs":OVKL(@"Сообщения"),@"news":OVKL(@"Новости"),@"profile":OVKL(@"Моя страница"),@"audio":OVKL(@"Музыка"),@"video":OVKL(@"Видеозаписи"),@"archive":OVKL(@"Архив записей"),@"settings":OVKL(@"Настройки")}[mode]; }
+NSString *OVKMenuTitle(NSString *mode) {
+    static NSDictionary *titles; static dispatch_once_t once; dispatch_once(&once, ^{ titles=@{@"notifications":@"Ответы",@"groups":@"Группы",@"friends":@"Друзья",@"photo":@"Фотографии",@"dialogs":@"Сообщения",@"news":@"Новости",@"profile":@"Моя страница",@"audio":@"Музыка",@"video":@"Видеозаписи",@"archive":@"Архив записей",@"settings":@"Настройки"}; }); return OVKL(titles[mode] ?: mode);
+}
 @implementation OVKMenuOrderController
 - (void)tableView:(UITableView *)tableView willDisplayHeaderView:(UIView *)view forSection:(NSInteger)section { OVKThemeSection(view); }
 - (void)tableView:(UITableView *)tableView willDisplayFooterView:(UIView *)view forSection:(NSInteger)section { OVKThemeSection(view); }
@@ -15,7 +19,7 @@ NSString *OVKMenuTitle(NSString *mode) { return @{@"notifications":OVKL(@"Отв
 - (UITableViewCellEditingStyle)tableView:(UITableView *)tableView editingStyleForRowAtIndexPath:(NSIndexPath *)path { return UITableViewCellEditingStyleNone; }
 - (BOOL)tableView:(UITableView *)tableView shouldIndentWhileEditingRowAtIndexPath:(NSIndexPath *)path { return NO; }
 - (BOOL)tableView:(UITableView *)tableView canMoveRowAtIndexPath:(NSIndexPath *)path { return YES; }
-- (void)tableView:(UITableView *)tableView moveRowAtIndexPath:(NSIndexPath *)source toIndexPath:(NSIndexPath *)destination { NSMutableArray *order=[OVKMenuOrder() mutableCopy]; id item=order[source.row]; [order removeObjectAtIndex:source.row]; [order insertObject:item atIndex:destination.row]; [[NSUserDefaults standardUserDefaults] setObject:order forKey:@"OVKMenuOrder"]; [[NSNotificationCenter defaultCenter] postNotificationName:@"OVKMenuOrderChanged" object:nil]; }
+- (void)tableView:(UITableView *)tableView moveRowAtIndexPath:(NSIndexPath *)source toIndexPath:(NSIndexPath *)destination { NSMutableArray *order=[OVKMenuOrder() mutableCopy]; id item=order[source.row]; [order removeObjectAtIndex:source.row]; [order insertObject:item atIndex:destination.row]; [[NSUserDefaults standardUserDefaults] setObject:order forKey:@"OVKMenuOrder"]; OVKCachedMenuOrder=nil; [[NSNotificationCenter defaultCenter] postNotificationName:@"OVKMenuOrderChanged" object:nil]; }
 @end
 @interface OVKAccountsController ()
 @property (strong, nonatomic) NSArray *accounts;

@@ -135,7 +135,7 @@
 @end
 @implementation OVKPasswordController
 - (UITextField *)field:(NSString *)placeholder y:(CGFloat)y secure:(BOOL)secure panel:(UIView *)panel {
-    UITextField *field = [[UITextField alloc] initWithFrame:CGRectMake(20,y,280,40)]; field.borderStyle = UITextBorderStyleRoundedRect; field.placeholder = placeholder; field.secureTextEntry = secure; field.autocorrectionType = UITextAutocorrectionTypeNo; field.autocapitalizationType = UITextAutocapitalizationTypeNone; field.font = [UIFont systemFontOfSize:15]; [panel addSubview:field]; return field;
+    UITextField *field = [[UITextField alloc] initWithFrame:CGRectMake(20,y,280,44)]; field.borderStyle = UITextBorderStyleRoundedRect; field.placeholder = placeholder; field.secureTextEntry = secure; field.autocorrectionType = UITextAutocorrectionTypeNo; field.autocapitalizationType = UITextAutocapitalizationTypeNone; field.font = [UIFont systemFontOfSize:15]; [panel addSubview:field]; return field;
 }
 - (void)viewDidLoad {
     [super viewDidLoad]; self.title = OVKL(@"Вход в аккаунт");
@@ -147,11 +147,11 @@
     self.username = [self field:OVKL(@"Логин или e-mail") y:48 secure:NO panel:panel]; self.username.keyboardType = UIKeyboardTypeEmailAddress;
     self.password = [self field:OVKL(@"Пароль") y:98 secure:YES panel:panel];
     self.code = [self field:OVKL(@"Код 2FA, если включён") y:148 secure:YES panel:panel]; self.code.keyboardType = UIKeyboardTypeNumberPad; self.code.hidden = YES;
-    self.login = [UIButton buttonWithType:UIButtonTypeCustom]; self.login.frame = CGRectMake(20,154,280,42); [self.login setBackgroundImage:[[UIImage imageNamed:@"LoginButton"] resizableImageWithCapInsets:UIEdgeInsetsMake(6,8,6,8)] forState:UIControlStateNormal]; [self.login setTitle:OVKL(@"Войти") forState:UIControlStateNormal]; self.login.titleLabel.font = [UIFont boldSystemFontOfSize:16]; [self.login addTarget:self action:@selector(submit) forControlEvents:UIControlEventTouchUpInside]; [panel addSubview:self.login];
+    self.login = [UIButton buttonWithType:UIButtonTypeCustom]; self.login.frame = CGRectMake(20,154,280,46); OVKStyleAssetButton(self.login,@"LoginButton"); [self.login setTitle:OVKL(@"Войти") forState:UIControlStateNormal]; self.login.titleLabel.font = [UIFont boldSystemFontOfSize:16]; [self.login addTarget:self action:@selector(submit) forControlEvents:UIControlEventTouchUpInside]; [panel addSubview:self.login];
     self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray]; self.spinner.frame = CGRectMake(150,210,20,20); self.spinner.hidesWhenStopped = YES; [panel addSubview:self.spinner];
     self.status = [[UILabel alloc] initWithFrame:CGRectMake(20,242,280,100)]; self.status.numberOfLines = 0; self.status.textAlignment = NSTextAlignmentCenter; self.status.font = [UIFont systemFontOfSize:12]; self.status.textColor = [UIColor colorWithWhite:.85 alpha:1]; self.status.backgroundColor = [UIColor clearColor]; self.status.text = OVKL(@"Данные будут отправлены выбранному инстансу по HTTPS. Пароль на устройстве не сохраняется."); [panel addSubview:self.status];
-    [self.login setBackgroundImage:[[UIImage imageNamed:@"LoginButtonPressed"] resizableImageWithCapInsets:UIEdgeInsetsMake(6,8,6,8)] forState:UIControlStateHighlighted];
-    for (UITextField *field in @[self.username,self.password,self.code]) { field.borderStyle=UITextBorderStyleNone; field.background=[[UIImage imageNamed:@"LoginField"] resizableImageWithCapInsets:UIEdgeInsetsMake(15,14,15,14)]; UIView *padding=[[UIView alloc] initWithFrame:CGRectMake(0,0,14,1)]; field.leftView=padding; field.leftViewMode=UITextFieldViewModeAlways; field.contentVerticalAlignment=UIControlContentVerticalAlignmentCenter; }
+    [self.login setBackgroundImage:OVKThemeStretch(@"LoginButtonPressed") forState:UIControlStateHighlighted];
+    for (UITextField *field in @[self.username,self.password,self.code]) { field.borderStyle=UITextBorderStyleNone; field.background=OVKThemeStretch(@"LoginField"); UIView *padding=[[UIView alloc] initWithFrame:CGRectMake(0,0,14,1)]; field.leftView=padding; field.leftViewMode=UITextFieldViewModeAlways; field.contentVerticalAlignment=UIControlContentVerticalAlignmentCenter; }
     // Keep the native form and its working authentication, with the old blue login layout.
     for (UIView *element in panel.subviews) { CGRect frame=element.frame; frame.origin.y+=90; element.frame=frame; }
     UIImageView *wordmark=[[UIImageView alloc] initWithImage:[UIImage imageNamed:@"LoginWordmark"]]; wordmark.frame=CGRectMake(65,30,190,50); wordmark.contentMode=UIViewContentModeScaleAspectFit; [panel addSubview:wordmark];
@@ -159,7 +159,7 @@
     if (self.embedded) {
         self.scroll.scrollEnabled=NO; self.scroll.backgroundColor=[UIColor clearColor]; backdrop.hidden=YES; server.hidden=YES;
         wordmark.image=OVKThemeLogo(); wordmark.frame=CGRectMake(112,18,96,96);
-        self.username.frame=CGRectMake(20,130,280,42); self.password.frame=CGRectMake(20,182,280,42); self.login.frame=CGRectMake(20,236,280,42);
+        self.username.frame=CGRectMake(20,130,280,44); self.password.frame=CGRectMake(20,182,280,44); self.login.frame=CGRectMake(20,236,280,46);
         self.status.frame=CGRectMake(20,284,280,28); self.status.font=[UIFont systemFontOfSize:10]; self.status.numberOfLines=2; self.status.text=@""; self.spinner.frame=CGRectMake(150,288,20,20);
         panel.frame=CGRectMake(0,0,320,316); self.scroll.contentSize=CGSizeMake(320,316);
     } else [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboard:) name:UIKeyboardWillChangeFrameNotification object:nil];

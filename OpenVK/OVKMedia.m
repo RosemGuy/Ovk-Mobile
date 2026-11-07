@@ -16,6 +16,7 @@
 #import <QuartzCore/QuartzCore.h>
 #import <math.h>
 #import <stdio.h>
+#import <string.h>
 static NSError *MediaError(NSInteger code,NSString *message) { return [NSError errorWithDomain:@"OpenVKMedia" code:code userInfo:@{NSLocalizedDescriptionKey:message}]; }
 // The coordinator runs these blocking platform calls on its serial worker queue.
 static OVKPlaybackSession *OVKAudioCoordinator(void) {
@@ -466,19 +467,26 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     if (![self.item[@"type"] isEqualToString:@"video"]) { [self prepareLocalAudio]; return; }
     // Inspect locally downloaded data asynchronously. No AVAudioPlayer file open/prepare on the UI thread.
     self.asset=[AVURLAsset URLAssetWithURL:self.localFile options:nil];
-    NSURL *inspectionFile=self.localFile;
+    NSURL *inspectionFile=self.localFile; AVURLAsset *inspectedAsset=self.asset; BOOL mayRecoverSound=!self.mergingSound;
     __weak OVKPlaybackController *weakSelf=self;
     [self.asset loadValuesAsynchronouslyForKeys:@[@"playable",@"tracks",@"duration"] completionHandler:^{
         NSData *bytes=[NSData dataWithContentsOfURL:inspectionFile options:NSDataReadingMappedIfSafe error:NULL];
         OVKMP4AudioInfo raw=OVKInspectMP4Audio(bytes.bytes,bytes.length);
+        NSURL *recovered=nil;
+        if (mayRecoverSound && raw.audioTracks && [inspectedAsset statusOfValueForKey:@"tracks" error:NULL]==AVKeyValueStatusLoaded && ![inspectedAsset tracksWithMediaType:AVMediaTypeAudio].count) {
+            NSString *suffix=(raw.objectType==0x69 || raw.objectType==0x6b || (raw.codecCount && !memcmp(raw.codecs[0],".mp3",4))) ? @"mp3" : @"aac";
+            NSString *path=[NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"ovk-recovered-%@.%@",[[NSProcessInfo processInfo] globallyUniqueString],suffix]];
+            if (OVKExtractMP4Audio(bytes.bytes,bytes.length,path.fileSystemRepresentation)) recovered=[NSURL fileURLWithPath:path];
+        }
         dispatch_async(dispatch_get_main_queue(), ^{
-            OVKPlaybackController *page=weakSelf; if (!page || page.stopped || generation!=page.playbackGeneration) return;
+            OVKPlaybackController *page=weakSelf; if (!page || page.stopped || generation!=page.playbackGeneration) { if (recovered) [[NSFileManager defaultManager] removeItemAtURL:recovered error:NULL]; return; }
             page.containerHasAudio=raw.valid && raw.audioTracks>0;
             if (raw.valid) {
                 NSMutableArray *codecs=[NSMutableArray array];
                 for (unsigned i=0;i<raw.codecCount;i++) { NSString *codec=[[NSString alloc] initWithBytes:raw.codecs[i] length:4 encoding:NSASCIIStringEncoding]; [codecs addObject:codec ?: @"????"]; }
-                [page.diagnostics addObject:[NSString stringWithFormat:@"MP4 raw: audio=%u, codecs=%@",raw.audioTracks,[codecs componentsJoinedByString:@", "]]];
+                [page.diagnostics addObject:[NSString stringWithFormat:@"MP4 raw: audio=%u, codecs=%@, object=0x%02X, AOT=%u",raw.audioTracks,[codecs componentsJoinedByString:@", "],raw.objectType,raw.audioObjectType]];
             }
+            if (recovered) { [page.diagnostics addObject:@"Аудиопакеты извлечены из MP4; готовим отдельную дорожку"]; [page prepareVideoSoundFile:recovered]; return; }
             [page assetPrepared];
         });
     }];
@@ -602,16 +610,22 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
         if (![@[@"m4a",@"mp3",@"mp4",@"aac",@"wav",@"mov"] containsObject:extension ?: @""]) extension=@"m4a";
         NSURL *named=[NSURL fileURLWithPath:[file.path stringByAppendingPathExtension:extension]];
         NSError *renameError=nil; if (![[NSFileManager defaultManager] moveItemAtURL:file toURL:named error:&renameError]) { [[NSFileManager defaultManager] removeItemAtURL:file error:NULL]; [page rejectVideo:renameError.localizedDescription]; return; }
-        page.soundFile=named; page.soundAsset=[AVURLAsset URLAssetWithURL:named options:nil];
-        page.prepareDeadline=[NSTimer timerWithTimeInterval:40 target:page selector:@selector(prepareTimedOut) userInfo:nil repeats:NO]; [[NSRunLoop mainRunLoop] addTimer:page.prepareDeadline forMode:NSRunLoopCommonModes];
-        [page.soundAsset loadValuesAsynchronouslyForKeys:@[@"tracks",@"duration"] completionHandler:^{ dispatch_async(dispatch_get_main_queue(), ^{
-            OVKPlaybackController *owner=weakSelf; if (!owner || owner.stopped || generation!=owner.playbackGeneration) return;
-            NSError *failure=nil;
-            if ([owner.soundAsset statusOfValueForKey:@"tracks" error:&failure]!=AVKeyValueStatusLoaded || [owner.soundAsset statusOfValueForKey:@"duration" error:&failure]!=AVKeyValueStatusLoaded) { [owner rejectVideo:failure.localizedDescription ?: OVKL(@"Не удалось открыть звуковую дорожку")]; return; }
-            [owner exportVideoWithSound:owner.soundAsset];
-        }); }];
+        [page prepareVideoSoundFile:named];
     }];
 }
+- (void)prepareVideoSoundFile:(NSURL *)file {
+    self.soundFile=file; self.soundAsset=[AVURLAsset URLAssetWithURL:file options:nil];
+    self.status.hidden=NO; self.status.text=OVKL(@"Соединяем видео и звук…");
+    [self.prepareDeadline invalidate]; self.prepareDeadline=[NSTimer timerWithTimeInterval:40 target:self selector:@selector(prepareTimedOut) userInfo:nil repeats:NO]; [[NSRunLoop mainRunLoop] addTimer:self.prepareDeadline forMode:NSRunLoopCommonModes];
+    NSUInteger generation=self.playbackGeneration; __weak OVKPlaybackController *weakSelf=self;
+    [self.soundAsset loadValuesAsynchronouslyForKeys:@[@"tracks",@"duration"] completionHandler:^{ dispatch_async(dispatch_get_main_queue(), ^{
+        OVKPlaybackController *owner=weakSelf; if (!owner || owner.stopped || generation!=owner.playbackGeneration) return;
+        NSError *failure=nil;
+        if ([owner.soundAsset statusOfValueForKey:@"tracks" error:&failure]!=AVKeyValueStatusLoaded || [owner.soundAsset statusOfValueForKey:@"duration" error:&failure]!=AVKeyValueStatusLoaded) { [owner rejectVideo:failure.localizedDescription ?: OVKL(@"Не удалось открыть звуковую дорожку")]; return; }
+        [owner exportVideoWithSound:owner.soundAsset];
+    }); }];
+}
+
 - (void)exportVideoWithSound:(AVAsset *)sound {
     NSError *failure=nil; AVMutableComposition *composition=OVKVideoComposition(self.asset,sound,&failure);
     if (!composition) { [self rejectVideo:failure.localizedDescription]; return; }

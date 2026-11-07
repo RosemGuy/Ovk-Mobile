@@ -1,4 +1,5 @@
 #import "OVKMusicLayout.h"
+#import "OVKVideoSound.h"
 #import "OVKPerformance.h"
 #import "OVKLanguage.h"
 #import "OVKMedia.h"
@@ -422,7 +423,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
         NSString *url = video ? OVKDirectVideoURL(media) : OVKMediaURL(OVKString(media[@"url"]));
         if (video) {
             for (NSString *candidate in OVKVideoURLs(media)) if (![page.videoURLs containsObject:candidate]) [page.videoURLs addObject:candidate];
-            if (media.count) { NSMutableDictionary *updated=[page.item mutableCopy]; updated[@"object"]=media; page.item=updated; }
+            if (media.count) { NSMutableDictionary *updated=[page.item mutableCopy]; updated[@"object"]=OVKMergeVideoMetadata(OVKDictionary(page.item[@"object"]),media); page.item=updated; }
             if (page.videoURLs.count) { [page loadNextVideo]; return; }
         }
         if (error || !url.length) { [page unavailable:error.localizedDescription ?: OVKL(@"Эта запись доступна только через веб-плеер или сервер не выдаёт файл.")]; return; }
@@ -432,7 +433,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
 - (void)loadURL:(NSString *)url {
     NSURL *address = [NSURL URLWithString:url];
     NSString *extension = address.pathExtension.lowercaseString ?: @"";
-    if ([@[@"m3u8",@"mpd",@"ogg",@"opus",@"webm"] containsObject:extension]) { [self unavailable:OVKL(@"Этот формат не поддерживается встроенным проигрывателем старой iOS.")]; return; }
+    if ([@[@"m3u8",@"mpd",@"ogg",@"opus",@"webm"] containsObject:extension]) { if ([self.item[@"type"] isEqualToString:@"video"]) [self rejectVideo:OVKL(@"Этот формат не поддерживается встроенным проигрывателем старой iOS.")]; else [self unavailable:OVKL(@"Этот формат не поддерживается встроенным проигрывателем старой iOS.")]; return; }
     self.status.text = OVKL(@"Загрузка записи перед воспроизведением…"); self.progress.progress = 0;
     __weak OVKPlaybackController *weakSelf = self;
     self.task = [OVKMedia download:url limit:256ULL*1024*1024 progress:^(float value) {
@@ -446,7 +447,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
         const char *detected=OVKMediaContainer(header.bytes,header.length);
         NSString *container=detected ? [NSString stringWithUTF8String:detected] : @"unknown";
         [page.diagnostics addObject:[NSString stringWithFormat:@"Контейнер файла: %@",container]];
-        if ([@[@"ogg",@"flac",@"webm"] containsObject:container]) { [[NSFileManager defaultManager] removeItemAtURL:file error:NULL]; [page failPlayback:[NSString stringWithFormat:OVKL(@"Сервер прислал %@. Штатный декодер iOS 6 этот формат не поддерживает."),container]]; return; }
+        if ([@[@"ogg",@"flac",@"webm"] containsObject:container]) { [[NSFileManager defaultManager] removeItemAtURL:file error:NULL]; NSString *message=[NSString stringWithFormat:OVKL(@"Сервер прислал %@. Штатный декодер iOS 6 этот формат не поддерживает."),container]; if ([page.item[@"type"] isEqualToString:@"video"]) [page rejectVideo:message]; else [page failPlayback:message]; return; }
         NSString *suffix=detected ? container : ([@[@"mp3",@"m4a",@"mp4",@"aac",@"wav",@"caf",@"aif",@"aiff",@"mov"] containsObject:extension] ? extension : @"bin");
         if ([container isEqualToString:@"mp4"] && ![page.item[@"type"] isEqualToString:@"video"]) suffix=@"m4a";
         NSURL *named = [NSURL fileURLWithPath:[file.path stringByAppendingPathExtension:suffix]];
@@ -517,6 +518,15 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
             NSUInteger audio=[self.asset tracksWithMediaType:AVMediaTypeAudio].count;
             [self.diagnostics addObject:[NSString stringWithFormat:@"Вариант %lu: видео %lu, аудио %lu (предварительно)",(unsigned long)self.candidateIndex,(unsigned long)[self.asset tracksWithMediaType:AVMediaTypeVideo].count,(unsigned long)audio]];
             if (!audio && !self.mergingSound && OVKVideoAudioURL(OVKDictionary(self.item[@"object"])).length) { [self fetchVideoSound]; return; }
+            if (!audio && !OVKString(self.item[@"local_path"]).length && self.candidateIndex<self.videoURLs.count) { [self rejectVideo:OVKL(@"В этом варианте нет аудиодорожки; пробуем следующий файл")]; return; }
+            AVAssetTrack *sound=OVKPreferredVideoAudioTrack(self.asset);
+            for (AVAssetTrack *track in [self.asset tracksWithMediaType:AVMediaTypeAudio]) for (id description in track.formatDescriptions) {
+                FourCharCode codec=CMFormatDescriptionGetMediaSubType((__bridge CMFormatDescriptionRef)description);
+                [self.diagnostics addObject:[NSString stringWithFormat:@"Audio codec %c%c%c%c; enabled=%d",(int)(codec>>24)&255,(int)(codec>>16)&255,(int)(codec>>8)&255,(int)codec&255,track.enabled]];
+            }
+            if (sound && !self.mergingSound && OVKVideoAudioNeedsConversion(sound) && OVKVideoAudioURL(OVKDictionary(self.item[@"object"])).length) { [self fetchVideoSound]; return; }
+            if (sound && !self.mergingSound && (!sound.enabled || sound.preferredVolume<=0 || OVKVideoAudioNeedsConversion(sound))) { [self exportVideoWithSound:self.asset]; return; }
+            if (!audio) { [self.diagnostics addObject:OVKL(@"Сервер не предоставил аудиодорожку ни в одном доступном варианте")]; self.navigationItem.prompt=OVKL(@"В этом файле нет аудиодорожки"); }
         } else [self.diagnostics addObject:@"Предварительная проверка недоступна; пробуем системный плеер"];
         // AVURLAsset's track inspection is diagnostic, not a veto for the movie player.
         self.movie=[[MPMoviePlayerController alloc] initWithContentURL:self.localFile];
@@ -584,31 +594,36 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
             OVKPlaybackController *owner=weakSelf; if (!owner || owner.stopped || generation!=owner.playbackGeneration) return;
             NSError *failure=nil;
             if ([owner.soundAsset statusOfValueForKey:@"tracks" error:&failure]!=AVKeyValueStatusLoaded || [owner.soundAsset statusOfValueForKey:@"duration" error:&failure]!=AVKeyValueStatusLoaded) { [owner rejectVideo:failure.localizedDescription ?: OVKL(@"Не удалось открыть звуковую дорожку")]; return; }
-            NSArray *audio=[owner.soundAsset tracksWithMediaType:AVMediaTypeAudio], *video=[owner.asset tracksWithMediaType:AVMediaTypeVideo];
-            if (!audio.count || !video.count) { [owner rejectVideo:OVKL(@"Отдельная звуковая дорожка не читается на этой iOS")]; return; }
-            AVMutableComposition *composition=[AVMutableComposition composition];
-            AVMutableCompositionTrack *v=[composition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
-            AVMutableCompositionTrack *a=[composition addMutableTrackWithMediaType:AVMediaTypeAudio preferredTrackID:kCMPersistentTrackID_Invalid];
-            AVAssetTrack *videoTrack=video[0]; CMTime duration=owner.asset.duration; CMTime audioDuration=owner.soundAsset.duration; if (!CMTIME_IS_NUMERIC(duration) || !CMTIME_IS_NUMERIC(audioDuration) || CMTimeCompare(duration,kCMTimeZero)<=0 || CMTimeCompare(audioDuration,kCMTimeZero)<=0) { [owner rejectVideo:OVKL(@"Не удалось определить длительность дорожек")]; return; }
-            if (![v insertTimeRange:CMTimeRangeMake(kCMTimeZero,duration) ofTrack:videoTrack atTime:kCMTimeZero error:&failure] || ![a insertTimeRange:CMTimeRangeMake(kCMTimeZero,CMTimeMinimum(duration,audioDuration)) ofTrack:audio[0] atTime:kCMTimeZero error:&failure]) { [owner rejectVideo:failure.localizedDescription ?: OVKL(@"Не удалось соединить дорожки")]; return; }
-            v.preferredTransform=videoTrack.preferredTransform;
-            owner.exporter=[[AVAssetExportSession alloc] initWithAsset:composition presetName:AVAssetExportPresetPassthrough];
-            if (!owner.exporter || ![owner.exporter.supportedFileTypes containsObject:AVFileTypeQuickTimeMovie]) { [owner rejectVideo:OVKL(@"iOS не поддерживает сборку этих дорожек")]; return; }
-            NSURL *joined=[NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"ovk-joined-%@.mov",[[NSProcessInfo processInfo] globallyUniqueString]]]];
-            owner.exporter.outputURL=joined; owner.exporter.outputFileType=AVFileTypeQuickTimeMovie; owner.status.text=OVKL(@"Соединяем видео и звук…");
-            AVAssetExportSession *session=owner.exporter;
-            [session exportAsynchronouslyWithCompletionHandler:^{ dispatch_async(dispatch_get_main_queue(), ^{
-                OVKPlaybackController *result=weakSelf; if (!result || result.stopped || generation!=result.playbackGeneration) { [[NSFileManager defaultManager] removeItemAtURL:joined error:NULL]; return; }
-                if (session.status!=AVAssetExportSessionStatusCompleted) { [[NSFileManager defaultManager] removeItemAtURL:joined error:NULL]; [result rejectVideo:session.error.localizedDescription ?: OVKL(@"Не удалось соединить дорожки")]; return; }
-                result.exporter=nil; [result.prepareDeadline invalidate]; result.prepareDeadline=nil; [result.asset cancelLoading]; result.asset=nil;
-                [result clearPlaybackFile]; result.localFile=joined; result.temporaryFile=YES;
-                [[NSFileManager defaultManager] removeItemAtURL:result.soundFile error:NULL]; result.soundFile=nil; result.soundAsset=nil; result.mergingSound=YES; [result beginPlayback];
-            }); }];
+            [owner exportVideoWithSound:owner.soundAsset];
         }); }];
     }];
 }
+- (void)exportVideoWithSound:(AVAsset *)sound {
+    NSError *failure=nil; AVMutableComposition *composition=OVKVideoComposition(self.asset,sound,&failure);
+    if (!composition) { [self rejectVideo:failure.localizedDescription]; return; }
+    BOOL convert=OVKVideoAudioNeedsConversion(OVKPreferredVideoAudioTrack(sound));
+    NSString *preset=convert ? AVAssetExportPresetMediumQuality : AVAssetExportPresetPassthrough;
+    self.exporter=[[AVAssetExportSession alloc] initWithAsset:composition presetName:preset];
+    NSString *type=convert ? AVFileTypeMPEG4 : AVFileTypeQuickTimeMovie;
+    if (!self.exporter || ![self.exporter.supportedFileTypes containsObject:type]) { [self rejectVideo:OVKL(@"iOS не поддерживает сборку этих дорожек")]; return; }
+    [self.prepareDeadline invalidate]; self.prepareDeadline=[NSTimer timerWithTimeInterval:convert ? 180 : 40 target:self selector:@selector(prepareTimedOut) userInfo:nil repeats:NO]; [[NSRunLoop mainRunLoop] addTimer:self.prepareDeadline forMode:NSRunLoopCommonModes];
+    NSURL *joined=[NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"ovk-joined-%@.%@",[[NSProcessInfo processInfo] globallyUniqueString],convert ? @"mp4" : @"mov"]]];
+    self.exporter.outputURL=joined; self.exporter.outputFileType=type;
+    self.status.hidden=NO; self.status.text=OVKL(convert ? @"Подготовка совместимого видео и звука…" : @"Соединяем видео и звук…");
+    [self.diagnostics addObject:convert ? @"Преобразование системным декодером в MP4/H.264/AAC" : @"Пересборка контейнера с явной звуковой дорожкой"];
+    AVAssetExportSession *session=self.exporter; NSUInteger generation=self.playbackGeneration;
+    __weak OVKPlaybackController *weakSelf=self;
+    [session exportAsynchronouslyWithCompletionHandler:^{ dispatch_async(dispatch_get_main_queue(), ^{
+        OVKPlaybackController *result=weakSelf;
+        if (!result || result.stopped || generation!=result.playbackGeneration) { [[NSFileManager defaultManager] removeItemAtURL:joined error:NULL]; return; }
+        if (session.status!=AVAssetExportSessionStatusCompleted) { [[NSFileManager defaultManager] removeItemAtURL:joined error:NULL]; [result rejectVideo:session.error.localizedDescription ?: OVKL(@"Не удалось соединить дорожки")]; return; }
+        result.exporter=nil; [result.prepareDeadline invalidate]; result.prepareDeadline=nil; [result.asset cancelLoading]; result.asset=nil;
+        [result clearPlaybackFile]; result.localFile=joined; result.temporaryFile=YES;
+        if (result.soundFile) [[NSFileManager defaultManager] removeItemAtURL:result.soundFile error:NULL]; result.soundFile=nil; result.soundAsset=nil; result.mergingSound=YES; [result beginPlayback];
+    }); }];
+}
 - (void)loadNextVideo {
-    self.mergingSound=NO;
+    self.mergingSound=NO; self.navigationItem.prompt=nil;
     if (self.stopped) return;
     if (self.candidateIndex>=self.videoURLs.count) { [self failPlayback:OVKL(@"Не удалось открыть вариант видео со звуком. Нажмите «Сведения», чтобы посмотреть результат проверки.")]; return; }
     NSString *url=self.videoURLs[self.candidateIndex++]; [self loadURL:url];
@@ -722,7 +737,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     if (!self.movie.isPreparedToPlay && !(self.movie.loadState & MPMovieLoadStatePlayable)) return;
     [self startPreparedPlayback];
 }
-- (void)prepareTimedOut { [self failPlayback:OVKL(@"Проигрыватель не смог подготовить запись за 25 секунд. Нажмите обновление, чтобы повторить.")]; }
+- (void)prepareTimedOut { if ([self.item[@"type"] isEqualToString:@"video"]) [self rejectVideo:OVKL(@"Истекло время подготовки варианта видео")]; else [self failPlayback:OVKL(@"Проигрыватель не смог подготовить запись за 25 секунд. Нажмите обновление, чтобы повторить.")]; }
 - (void)releasePlayer {
     ++self.playbackGeneration; self.nowPlayingUpdated=0; [self endAudioTask]; [self.prepareDeadline invalidate];
     [self.musicTimer invalidate]; self.musicTimer=nil;

@@ -324,5 +324,10 @@
   "Один трек": "One track",
   "Перемешать": "Shuffle",
   "Включено": "On",
-  "Выберите диалог слева": "Select a conversation on the left"
+  "Выберите диалог слева": "Select a conversation on the left",
+  "В этом варианте нет аудиодорожки; пробуем следующий файл": "No audio track in this rendition; trying the next file",
+  "Сервер не предоставил аудиодорожку ни в одном доступном варианте": "The server did not provide audio in any available rendition",
+  "В этом файле нет аудиодорожки": "This file has no audio track",
+  "Подготовка совместимого видео и звука…": "Preparing compatible video and audio…",
+  "Истекло время подготовки варианта видео": "Video rendition preparation timed out"
 }

@@ -36,6 +36,9 @@ int main(void) {
         Expect(!OVKVideoURLs(@{@"files":@{@"mp4_360":@"javascript:alert(1)"}}).count,"Invalid candidate schemes rejected");
         NSArray *previews=OVKPlayableAttachments(@{@"attachments":@[@{@"type":@"photo",@"photo":@{@"photo_1280":@"/full.jpg",@"photo_604":@"/preview.jpg",@"photo_130":@"/tiny.jpg"}}]});
         Expect([previews[0][@"url"] hasSuffix:@"/full.jpg"] && [previews[0][@"preview"] hasSuffix:@"/preview.jpg"],"Thumbnail chosen separately without replacing viewer source");
+        NSDictionary *merged=OVKMergeVideoMetadata(@{@"files":@{@"audio":@"/sound.m4a",@"mp4_360":@"/old.mp4"},@"audio_url":@"/fallback.m4a"},@{@"files":@{@"mp4_360":@"/fresh.mp4",@"audio":[NSNull null]},@"audio_url":@""});
+        Expect([OVKVideoAudioURL(merged) hasSuffix:@"/sound.m4a"],"video.get refresh preserves separate sound from attachment");
+        Expect([OVKDirectVideoURL(merged) hasSuffix:@"/fresh.mp4"],"Fresh video rendition overrides old URL");
         puts("PASS: media URLs, photo sizes, multiple attachments, audio/video, voice, explicit/reposts, malformed data");
     }
     return 0;

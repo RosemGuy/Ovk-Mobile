@@ -46,6 +46,15 @@ NSArray *OVKVideoURLs(NSDictionary *video) {
     }
     return urls;
 }
+NSDictionary *OVKMergeVideoMetadata(NSDictionary *existing, NSDictionary *fresh) {
+    existing=OVKDictionary(existing); fresh=OVKDictionary(fresh);
+    NSMutableDictionary *merged=[existing mutableCopy];
+    for (NSString *key in fresh) { id value=fresh[key]; if (value!=[NSNull null] && (![value isKindOfClass:[NSString class]] || [value length])) merged[key]=value; }
+    NSMutableDictionary *files=[OVKDictionary(existing[@"files"]) mutableCopy];
+    for (NSString *key in OVKDictionary(fresh[@"files"])) { id value=fresh[@"files"][key]; if (value!=[NSNull null] && (![value isKindOfClass:[NSString class]] || [value length])) files[key]=value; }
+    merged[@"files"]=files;
+    return merged;
+}
 NSString *OVKVideoAudioURL(NSDictionary *video) {
     NSDictionary *files=OVKDictionary(video[@"files"]);
     for (id raw in @[files[@"audio"] ?: @"",files[@"mp3"] ?: @"",files[@"m4a"] ?: @"",video[@"audio_url"] ?: @""]) {

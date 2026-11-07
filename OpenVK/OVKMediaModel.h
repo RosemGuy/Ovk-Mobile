@@ -6,3 +6,5 @@ NSString *OVKDirectVideoURL(NSDictionary *video);
 
 NSArray *OVKVideoURLs(NSDictionary *video);
 NSString *OVKVideoAudioURL(NSDictionary *video);
+
+NSDictionary *OVKMergeVideoMetadata(NSDictionary *existing, NSDictionary *fresh);

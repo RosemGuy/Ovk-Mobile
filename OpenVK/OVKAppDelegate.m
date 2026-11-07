@@ -20,6 +20,11 @@
 }
 - (void)applicationDidReceiveMemoryWarning:(UIApplication *)application { [OVKMedia clearImageCache]; OVKClearThemeCaches(); }
 - (void)applicationDidBecomeActive:(UIApplication *)application { OVKRestoreDefaultApplicationIcon(); }
+// The app-level mask must allow media landscape on phones. Individual
+// navigation controllers keep ordinary phone screens portrait-only.
+- (NSUInteger)application:(UIApplication *)application supportedInterfaceOrientationsForWindow:(UIWindow *)window {
+    return UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad ? UIInterfaceOrientationMaskAll : UIInterfaceOrientationMaskAllButUpsideDown;
+}
 - (BOOL)canBecomeFirstResponder { return YES; }
 - (void)remoteControlReceivedWithEvent:(UIEvent *)event { [OVKMedia handleRemoteControl:event]; }
 - (BOOL)application:(UIApplication *)application openURL:(NSURL *)url sourceApplication:(NSString *)source annotation:(id)annotation {

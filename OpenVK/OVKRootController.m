@@ -181,7 +181,11 @@ static UIImage *OVKMenuGlyph(void) {
     [UIView animateWithDuration:.2 animations:^{ self.active.view.transform = CGAffineTransformIdentity; }];
 }
 - (BOOL)shouldAutorotate { return YES; }
-- (NSUInteger)supportedInterfaceOrientations { return self.active ? self.active.supportedInterfaceOrientations : UIInterfaceOrientationMaskPortrait; }
+- (NSUInteger)supportedInterfaceOrientations {
+    UIViewController *presented=self.presentedViewController;
+    if (presented && !presented.isBeingDismissed && presented.modalPresentationStyle==UIModalPresentationFullScreen) return presented.supportedInterfaceOrientations;
+    return self.active ? self.active.supportedInterfaceOrientations : UIInterfaceOrientationMaskPortrait;
+}
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning]; for (NSString *mode in [self.sections allKeys]) if (![mode isEqualToString:self.selected] && ![mode isEqualToString:@"audio"]) [self.sections removeObjectForKey:mode];
 }

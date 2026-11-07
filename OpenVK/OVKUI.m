@@ -710,6 +710,8 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 @implementation OVKNavigationController
 - (BOOL)shouldAutorotate { return YES; }
 - (NSUInteger)supportedInterfaceOrientations {
+    UIViewController *presented=self.presentedViewController;
+    if (presented && !presented.isBeingDismissed && presented.modalPresentationStyle==UIModalPresentationFullScreen) return presented.supportedInterfaceOrientations;
     UIViewController *page=self.topViewController;
     if ([page isKindOfClass:[OVKPhotoController class]] || [page isKindOfClass:NSClassFromString(@"OVKPlaybackController")]) return page.supportedInterfaceOrientations;
     return UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad ? UIInterfaceOrientationMaskAll : UIInterfaceOrientationMaskPortrait;

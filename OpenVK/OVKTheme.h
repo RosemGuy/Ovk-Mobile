@@ -31,3 +31,5 @@ UIColor *OVKPostFooterColor(void);
 
 UIColor *OVKProfilePanelColor(void);
 void OVKStyleAssetButton(UIButton *button, NSString *name);
+
+UIImage *OVKLoginLogo(void);

@@ -431,7 +431,7 @@ void OVKPresentPhoto(UIViewController *presenter, OVKPhotoController *photo) {
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
     if ([self.item[@"type"] isEqualToString:@"video"]) { if (!self.rotationObserver) self.rotationObserver=[[OVKMediaRotationObserver alloc] init]; [self.navigationController setNavigationBarHidden:YES animated:animated]; }
-    if (![self.item[@"type"] isEqualToString:@"video"]) { [self.navigationController.navigationBar setBackgroundImage:[UIImage imageNamed:@"MusicNavigation"] forBarMetrics:UIBarMetricsDefault]; self.navigationController.navigationBar.barStyle=UIBarStyleBlack; }
+    if (![self.item[@"type"] isEqualToString:@"video"]) { [self.navigationController.navigationBar setBackgroundImage:OVKThemeStretch(@"MusicNavigation") forBarMetrics:UIBarMetricsDefault]; self.navigationController.navigationBar.barStyle=UIBarStyleBlack; }
 }
 - (void)viewDidAppear:(BOOL)animated { [super viewDidAppear:animated]; [UIViewController attemptRotationToDeviceOrientation]; if (![self.item[@"type"] isEqualToString:@"video"]) { UIResponder *responder=(UIResponder *)[UIApplication sharedApplication].delegate; [responder becomeFirstResponder]; } }
 - (void)viewWillDisappear:(BOOL)animated { [super viewWillDisappear:animated]; if ([self.item[@"type"] isEqualToString:@"video"]) { if (!self.enteringVideoFullscreen && !self.movie.fullscreen) [self stop]; if (!self.enteringVideoFullscreen && !self.movie.fullscreen) [self.navigationController setNavigationBarHidden:self.playbackNavigationWasHidden animated:animated]; } self.navigationController.navigationBar.barStyle=UIBarStyleDefault; OVKStyleNavigation(self.navigationController); }

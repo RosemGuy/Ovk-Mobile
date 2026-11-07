@@ -1,6 +1,6 @@
 #import "OVKTheme.h"
-static NSCache *OVKChromeImages=nil,*OVKIconImages=nil,*OVKStretchedImages=nil;
-void OVKClearThemeCaches(void) { [OVKChromeImages removeAllObjects]; [OVKIconImages removeAllObjects]; [OVKStretchedImages removeAllObjects]; }
+static NSCache *OVKChromeImages=nil,*OVKIconImages=nil,*OVKStretchedImages=nil,*OVKLogoImages=nil;
+void OVKClearThemeCaches(void) { [OVKChromeImages removeAllObjects]; [OVKIconImages removeAllObjects]; [OVKStretchedImages removeAllObjects]; [OVKLogoImages removeAllObjects]; }
 static BOOL OVKDark;
 static NSString *OVKColor;
 NSArray *OVKThemeColors(void) { static NSArray *colors; static dispatch_once_t once; dispatch_once(&once, ^{ colors=@[@"blue",@"purple",@"red",@"green",@"orange",@"pink"]; }); return colors; }
@@ -60,13 +60,20 @@ void OVKThemeSection(UIView *view) {
     for (UIView *child in view.subviews) OVKThemeSection(child);
 }
 
-UIImage *OVKThemeLogo(void) {
+static UIImage *OVKLogoForBackground(BOOL login) {
+    static dispatch_once_t once; dispatch_once(&once, ^{ OVKLogoImages=[[NSCache alloc] init]; OVKLogoImages.countLimit=2; });
+    NSString *key=login ? @"login" : @"theme"; UIImage *cached=[OVKLogoImages objectForKey:key]; if (cached) return cached;
     UIImage *source=[UIImage imageNamed:@"Avatar"]; if (!source) return nil;
     UIGraphicsBeginImageContextWithOptions(source.size,NO,source.scale);
-    [source drawAtPoint:CGPointZero]; [OVKBaseAccent() setFill];
+    // The supplied mark has low alpha. Build an opaque-looking silhouette
+    // while retaining its original outline and transparent surroundings.
+    for (NSUInteger pass=0;pass<4;pass++) [source drawAtPoint:CGPointZero];
+    [(login ? [UIColor whiteColor] : OVKThemeAccent()) setFill];
     UIRectFillUsingBlendMode((CGRect){CGPointZero,source.size},kCGBlendModeSourceIn);
-    UIImage *result=UIGraphicsGetImageFromCurrentImageContext(); UIGraphicsEndImageContext(); return result;
+    UIImage *result=UIGraphicsGetImageFromCurrentImageContext(); UIGraphicsEndImageContext(); if (result) [OVKLogoImages setObject:result forKey:key]; return result;
 }
+UIImage *OVKThemeLogo(void) { return OVKLogoForBackground(NO); }
+UIImage *OVKLoginLogo(void) { return OVKLogoForBackground(YES); }
 // Restore the primary icon for installations that previously selected a theme icon.
 #if __IPHONE_OS_VERSION_MAX_ALLOWED < 100300
 @interface UIApplication (OVKPrimaryIconAPI)

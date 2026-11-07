@@ -4,24 +4,7 @@
 #import "OVKUI.h"
 #import "OVKAPI.h"
 BOOL OVKExperimentalMusic(void) { return YES; }
-BOOL OVKExperimentalVideo(void) { return [[NSUserDefaults standardUserDefaults] boolForKey:@"ExperimentalVideo"]; }
-@implementation OVKExperimentalController
-- (void)tableView:(UITableView *)tableView willDisplayHeaderView:(UIView *)view forSection:(NSInteger)section { OVKThemeSection(view); }
-- (void)tableView:(UITableView *)tableView willDisplayFooterView:(UIView *)view forSection:(NSInteger)section { OVKThemeSection(view); }
-- (void)viewWillAppear:(BOOL)animated { [super viewWillAppear:animated]; OVKThemeTable(self.tableView); [self.tableView reloadData]; }
-- (id)init { self=[super initWithStyle:UITableViewStyleGrouped]; if (self) self.title=OVKL(@"Экспериментальное"); return self; }
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return 1; }
-- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section { return OVKL(@"Видео — экспериментальный раздел. Музыка OpenVK доступна в разделе «Музыка»."); }
-- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)index {
-    UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-    cell.textLabel.text=index.row ? OVKL(@"Музыка OpenVK") : OVKL(@"Видеозаписи"); cell.imageView.image=[UIImage imageNamed:index.row ? @"AudioMedia" : @"VideoMedia"];
-    UISwitch *toggle=[[UISwitch alloc] init]; toggle.tag=index.row; toggle.on=index.row ? OVKExperimentalMusic() : OVKExperimentalVideo(); [toggle addTarget:self action:@selector(changed:) forControlEvents:UIControlEventValueChanged]; cell.accessoryView=toggle; cell.selectionStyle=UITableViewCellSelectionStyleNone; OVKThemeCell(cell); return cell;
-}
-- (void)changed:(UISwitch *)toggle {
-    [[NSUserDefaults standardUserDefaults] setBool:toggle.on forKey:toggle.tag ? @"ExperimentalOpenVKMusic" : @"ExperimentalVideo"];
-    [[NSNotificationCenter defaultCenter] postNotificationName:@"OVKExperimentalChanged" object:nil];
-}
-@end
+BOOL OVKExperimentalVideo(void) { return YES; }
 @interface OVKLocalMusicController : OVKAttachmentsController
 @property (assign, nonatomic) BOOL scanning;
 @property (assign, nonatomic) BOOL scanAgain;

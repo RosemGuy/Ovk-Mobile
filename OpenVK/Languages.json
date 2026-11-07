@@ -358,5 +358,8 @@
   "Новое уведомление": "New notification",
   "Запись недоступна": "Post unavailable",
   "Отписаться от группы?": "Unsubscribe from this group?",
-  "Отписаться": "Unsubscribe"
+  "Отписаться": "Unsubscribe",
+  "Настройка клиента": "Client setup",
+  "Язык, тема и цвет": "Language, theme and color",
+  "Выберите язык, тему и цвет. Их можно изменить позже в настройках.": "Choose your language, theme and color. You can change them later in Settings."
 }

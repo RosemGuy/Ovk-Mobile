@@ -158,7 +158,7 @@
     CGRect panelFrame=panel.frame; panelFrame.size.height=505; panel.frame=panelFrame; self.scroll.contentSize=CGSizeMake(320,505);
     if (self.embedded) {
         self.scroll.scrollEnabled=NO; self.scroll.backgroundColor=[UIColor clearColor]; backdrop.hidden=YES; server.hidden=YES;
-        wordmark.image=OVKThemeLogo(); wordmark.frame=CGRectMake(112,18,96,96);
+        wordmark.image=OVKLoginLogo(); wordmark.frame=CGRectMake(112,18,96,96);
         self.username.frame=CGRectMake(20,130,280,44); self.password.frame=CGRectMake(20,182,280,44); self.login.frame=CGRectMake(20,236,280,46);
         self.status.frame=CGRectMake(20,284,280,28); self.status.font=[UIFont systemFontOfSize:10]; self.status.numberOfLines=2; self.status.text=@""; self.spinner.frame=CGRectMake(150,288,20,20);
         panel.frame=CGRectMake(0,0,320,316); self.scroll.contentSize=CGSizeMake(320,316);

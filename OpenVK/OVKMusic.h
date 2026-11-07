@@ -4,5 +4,3 @@ BOOL OVKExperimentalMusic(void);
 BOOL OVKExperimentalVideo(void);
 @interface OVKMusicController : UIViewController
 @end
-@interface OVKExperimentalController : UITableViewController
-@end

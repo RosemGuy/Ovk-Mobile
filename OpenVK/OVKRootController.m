@@ -1,3 +1,4 @@
+#import "OVKSetup.h"
 #import "OVKSocial.h"
 #import "OVKPerformance.h"
 #import "OVKLanguage.h"
@@ -65,10 +66,10 @@ static UIImage *OVKMenuGlyph(void) {
     if (path.section==0 && path.row==1) { cell.textLabel.text=OVKL(@"Аккаунты"); cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator; }
     else if (path.section == 0) { cell.textLabel.text = OVKL(@"Инстанс"); cell.detailTextLabel.numberOfLines = 2; cell.detailTextLabel.text = [OVKAPI shared].demo ? OVKL(@"Демонстрация без аккаунта") : [NSString stringWithFormat:@"%@\nAPI: %@",[OVKAPI shared].siteServer ?: [OVKAPI shared].server,[OVKAPI shared].server]; }
     else if (path.section == 1) {
-        cell.textLabel.text=@[@"Ovk-Mobile alpha",OVKL(@"Оформление"),OVKL(@"Экспериментальное"),OVKL(@"Язык"),OVKL(@"Очистить кэш изображений"),OVKL(@"Порядок меню")][path.row];
-        cell.detailTextLabel.text=@[OVKL(@"Версия 1.0"),OVKL(@"Тема, цвет и размер текста"),OVKL(@"Видеозаписи"),OVKLanguageIsEnglish() ? @"English" : @"Русский",OVKL(@"Освободить память от загруженных изображений"),OVKL(@"Перетащите пункты в нужном порядке")][path.row];
+        cell.textLabel.text=@[@"Ovk-Mobile alpha",OVKL(@"Оформление"),OVKL(@"Настройка клиента"),OVKL(@"Язык"),OVKL(@"Очистить кэш изображений"),OVKL(@"Порядок меню")][path.row];
+        cell.detailTextLabel.text=@[OVKL(@"Версия 1.0"),OVKL(@"Тема, цвет и размер текста"),OVKL(@"Язык, тема и цвет"),OVKLanguageIsEnglish() ? @"English" : @"Русский",OVKL(@"Освободить память от загруженных изображений"),OVKL(@"Перетащите пункты в нужном порядке")][path.row];
         if (path.row==0 || path.row==1 || path.row==3 || path.row==5) cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator;
-        if (path.row==2) { cell.imageView.image=[UIImage imageNamed:@"Experimental"]; cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator; }
+        if (path.row==2) { cell.imageView.image=[UIImage imageNamed:@"Settings"]; cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator; }
     }
     else { cell.textLabel.text = OVKL(@"Выйти из аккаунта"); cell.textLabel.textColor = [UIColor colorWithRed:.65 green:.18 blue:.18 alpha:1]; }
     OVKThemeCell(cell); return cell;
@@ -81,7 +82,7 @@ static UIImage *OVKMenuGlyph(void) {
     if (path.section==1 && path.row==1) [self.navigationController pushViewController:[[OVKAppearanceController alloc] init] animated:YES];
     if (path.section==1 && path.row==4) { [OVKMedia clearImageCache]; OVKAlert(OVKL(@"Кэш очищен"),OVKL(@"Кэш изображений в памяти очищен. Открытые фотографии останутся на экране.")); }
     if (path.section==1 && path.row==3) [self.navigationController pushViewController:[[OVKLanguageController alloc] init] animated:YES];
-    if (path.section==1 && path.row==2) [self.navigationController pushViewController:[[OVKExperimentalController alloc] init] animated:YES];
+    if (path.section==1 && path.row==2) [self.navigationController pushViewController:[[OVKSetupController alloc] init] animated:YES];
     if (path.section == 2) [[[UIAlertView alloc] initWithTitle:OVKL(@"Выйти?") message:OVKL(@"Сохранённый токен будет удалён с устройства.") delegate:self cancelButtonTitle:OVKL(@"Отмена") otherButtonTitles:OVKL(@"Выйти"),nil] show];
 }
 - (void)viewWillAppear:(BOOL)animated { [super viewWillAppear:animated]; self.title=OVKL(@"Настройки"); OVKThemeTable(self.tableView); [self.tableView reloadData]; }

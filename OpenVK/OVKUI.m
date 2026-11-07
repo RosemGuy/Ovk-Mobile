@@ -29,7 +29,7 @@ void OVKStyleNavigation(UINavigationController *nav) {
     [[UIBarButtonItem appearance] setBackButtonBackgroundImage:OVKThemeStretch(@"BackButton") forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
     [[UIBarButtonItem appearance] setBackButtonBackgroundImage:OVKThemeStretch(@"BackButtonPressed") forState:UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
     [[UIBarButtonItem appearance] setTitleTextAttributes:@{UITextAttributeTextColor:[UIColor whiteColor],UITextAttributeTextShadowColor:[UIColor colorWithWhite:0 alpha:.55],UITextAttributeTextShadowOffset:[NSValue valueWithUIOffset:UIOffsetMake(0,-1)],UITextAttributeFont:[UIFont boldSystemFontOfSize:12]} forState:UIControlStateNormal];
-    [nav.navigationBar setBackgroundImage:OVKThemeChrome(@"Navigation") forBarMetrics:UIBarMetricsDefault];
+    [nav.navigationBar setBackgroundImage:OVKThemeStretch(@"Navigation") forBarMetrics:UIBarMetricsDefault];
     for (UIViewController *page in nav.viewControllers) {
         NSMutableArray *items=[NSMutableArray array]; if (page.navigationItem.leftBarButtonItem) [items addObject:page.navigationItem.leftBarButtonItem]; if (page.navigationItem.rightBarButtonItem) [items addObject:page.navigationItem.rightBarButtonItem];
         for (UIBarButtonItem *item in items) if (!item.customView) { [item setBackgroundImage:button forState:UIControlStateNormal barMetrics:UIBarMetricsDefault]; [item setBackgroundImage:pressed forState:UIControlStateHighlighted barMetrics:UIBarMetricsDefault]; }

@@ -1,3 +1,4 @@
+#import "OVKSetup.h"
 #import "OVKLanguage.h"
 #import "OVKUI.h"
 #import "OVKAPI.h"
@@ -16,7 +17,11 @@
     [self.window.rootViewController dismissViewControllerAnimated:NO completion:nil]; self.window.rootViewController = nav;
 }
 - (void)showClient {
-    self.window.rootViewController = [[OVKRootController alloc] init];
+    if (![OVKAPI shared].demo && ![[NSUserDefaults standardUserDefaults] boolForKey:@"OVKClientSetupCompleted"]) {
+        OVKSetupController *setup=[[OVKSetupController alloc] init]; __weak OVKAppDelegate *weakSelf=self;
+        setup.completed=^{ weakSelf.window.rootViewController=[[OVKRootController alloc] init]; };
+        UINavigationController *navigation=[[OVKNavigationController alloc] initWithRootViewController:setup]; OVKStyleNavigation(navigation); self.window.rootViewController=navigation;
+    } else self.window.rootViewController=[[OVKRootController alloc] init];
 }
 - (void)applicationDidReceiveMemoryWarning:(UIApplication *)application { [OVKMedia clearImageCache]; OVKClearThemeCaches(); }
 - (void)applicationDidBecomeActive:(UIApplication *)application { OVKRestoreDefaultApplicationIcon(); }

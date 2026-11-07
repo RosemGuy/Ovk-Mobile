@@ -38,8 +38,8 @@ AVMutableComposition *OVKVideoComposition(AVAsset *video, AVAsset *sound, NSErro
     CMTime destination=sound==video ? ar.start : kCMTimeZero;
     ar.duration=CMTimeMinimum(ar.duration,CMTimeSubtract(video.duration,destination));
     if (CMTimeCompare(ar.duration,kCMTimeZero)<=0 || ![v insertTimeRange:vr ofTrack:picture atTime:vr.start error:error] || ![a insertTimeRange:ar ofTrack:audio atTime:destination error:error]) return nil;
-    // New composition tracks use the default volume (1.0). In SDK 7.1,
-    // preferredVolume is read-only; do not call its newer mutable setter.
-    v.preferredTransform=picture.preferredTransform; v.enabled=YES; a.enabled=YES;
+    // Fresh composition tracks are enabled and use the default volume.
+    // Older SDKs expose these properties as read-only.
+    v.preferredTransform=picture.preferredTransform;
     return result;
 }

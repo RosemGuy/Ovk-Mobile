@@ -8,6 +8,7 @@
 #import "OVKWall.h"
 #import "OVKWallModel.h"
 #import "OVKFeedLayout.h"
+#import "OVKSocial.h"
 #import <QuartzCore/QuartzCore.h>
 #import <math.h>
 UIColor *OVKBlue(void) { return OVKThemeAccent(); }
@@ -271,7 +272,16 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 }
 - (BOOL)isProfile { return [self.mode isEqualToString:@"profile"]; }
 - (BOOL)isChat { return [self.mode isEqualToString:@"chat"]; }
-- (BOOL)isFeed { return [self.mode isEqualToString:@"news"] || [self.mode isEqualToString:@"archive"] || [self isProfile] || [self isPost]; }
+- (CGFloat)wallContentWidth { return self.tableView.bounds.size.width; }
+- (void)setWallHeaderView:(UIView *)header {
+    UIView *container=[[UIView alloc] initWithFrame:CGRectMake(0,0,header.bounds.size.width,header.bounds.size.height+44)];
+    header.autoresizingMask=UIViewAutoresizingFlexibleWidth; [container addSubview:header];
+    self.notice.frame=CGRectMake(0,header.bounds.size.height,header.bounds.size.width,44); self.notice.autoresizingMask=UIViewAutoresizingFlexibleWidth; [container addSubview:self.notice]; self.tableView.tableHeaderView=container;
+}
+- (id)initWithPostObject:(NSDictionary *)post profiles:(NSArray *)profiles groups:(NSArray *)groups {
+    self=[self initWithMode:@"post" identifier:nil title:OVKL(@"Запись")]; if (self) { self.singlePost=post; [self indexPeople:@{@"profiles":profiles ?: @[],@"groups":groups ?: @[]}]; } return self;
+}
+- (BOOL)isFeed { return [self.mode isEqualToString:@"news"] || [self.mode isEqualToString:@"archive"] || [self isProfile] || [self isPost] || [self.mode isEqualToString:@"groupWall"]; }
 - (BOOL)isPost { return [self.mode isEqualToString:@"post"]; }
 - (void)viewDidLoad {
     [super viewDidLoad]; OVKConfigureEdges(self);
@@ -368,6 +378,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     if ([self.mode isEqualToString:@"friends"]) { method = @"friends.get"; params[@"user_id"] = self.identifier ?: [OVKAPI shared].userID; }
     else if ([self.mode isEqualToString:@"dialogs"]) method = @"messages.getConversations";
     else if ([self.mode isEqualToString:@"archive"]) { method=@"wall.get"; params[@"owner_id"]=[OVKAPI shared].userID; params[@"filter"]=@"archived"; }
+    else if ([self.mode isEqualToString:@"groupWall"]) { method=@"wall.get"; params[@"owner_id"]=self.identifier; params[@"filter"]=@"all"; }
     else if ([self isProfile]) { method = @"wall.get"; params[@"owner_id"] = self.identifier; params[@"filter"]=self.ownerOnly ? @"owner" : @"all"; }
     else if ([self isChat]) { method = @"messages.getHistory"; params[@"peer_id"] = self.identifier; }
     else if (append && self.nextCursor.length) { params[@"start_from"] = self.nextCursor; [params removeObjectForKey:@"offset"]; }
@@ -584,7 +595,7 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     id rawProfileID=[self.mode isEqualToString:@"friends"] ? item[@"id"] : (item[@"from_id"] ?: item[@"source_id"] ?: person[@"id"]);
     if ([self.mode isEqualToString:@"dialogs"]) rawProfileID=OVKDictionary(OVKDictionary(item[@"conversation"])[@"peer"])[@"id"];
     NSNumber *profileID=@([OVKString(rawProfileID) longLongValue]); BOOL userProfile=profileID.longLongValue>0 && (![self.mode isEqualToString:@"dialogs"] || profileID.longLongValue<2000000000LL);
-    cell.avatarTapped = ^{ if (userProfile) [weakSelf.navigationController pushViewController:[[OVKListController alloc] initWithMode:@"profile" identifier:profileID title:OVKName(person)] animated:YES]; else if (avatarURL.length) OVKPresentPhoto(weakSelf,[[OVKPhotoController alloc] initWithURL:avatarURL title:OVKL(@"Аватар")]); };
+    cell.avatarTapped = ^{ if (userProfile) [weakSelf.navigationController pushViewController:[[OVKListController alloc] initWithMode:@"profile" identifier:profileID title:OVKName(person)] animated:YES]; else if (profileID.longLongValue<0) [weakSelf.navigationController pushViewController:[[OVKGroupController alloc] initWithGroup:@(-profileID.longLongValue) title:OVKName(person)] animated:YES]; else if (avatarURL.length) OVKPresentPhoto(weakSelf,[[OVKPhotoController alloc] initWithURL:avatarURL title:OVKL(@"Аватар")]); };
     NSDictionary *message = [self.mode isEqualToString:@"dialogs"] ? OVKDictionary(item[@"last_message"]) : item;
     NSString *date = OVKDate(message[@"date"]); NSInteger unread = [OVKDictionary(item[@"conversation"])[@"unread_count"] integerValue];
     cell.unreadBadge.text=unread>99 ? @"99+" : [NSString stringWithFormat:@"%ld",(long)unread];

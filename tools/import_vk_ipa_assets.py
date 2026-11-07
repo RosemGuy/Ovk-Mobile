@@ -12,6 +12,7 @@ MAP={
  'BackButton':'blue_back_btn_nav','BackButtonPressed':'blue_back_btn_nav_hl',
  'MusicRepeat':'audioplayer_replay','MusicRepeatActive':'audioplayer_replay_hl','MusicShuffle':'audioplayer_shuffle','MusicShuffleActive':'audioplayer_shuffle_hl',
  'MusicNavigation':'black_header','MusicButton':'black_btn_nav',
+ 'Answers':'left_answers','Groups':'left_groups','GroupPlaceholder':'group_placeholder_50px',
  'News':'left_news','Friends':'left_friends','Messages':'left_messages','Settings':'left_settings',
  'PhotoMedia':'left_photos','AudioMedia':'left_audio','VideoMedia':'left_videos','Profile':'left_wall',
  'Menu':'menu_icon','MenuRow':'left_cell','MenuSelected':'menu_cell_hl',

@@ -471,6 +471,23 @@
           }
         }
       ]
+    },
+    {
+      "id": 1,
+      "post_id": 12,
+      "source_id": -100,
+      "owner_id": -100,
+      "from_id": -100,
+      "date": 1793857800,
+      "text": "Демонстрационная стена сообщества.",
+      "likes": {
+        "count": 12
+      },
+      "attachments": [],
+      "comments": {
+        "count": 2,
+        "can_post": 1
+      }
     }
   ],
   "photos.getAll": {
@@ -576,5 +593,114 @@
       }
     ],
     "groups": []
-  }
+  },
+  "groups.get": {
+    "count": 1,
+    "items": [
+      {
+        "id": 100,
+        "name": "OpenVK Classic • демогруппа",
+        "description": "Тестовое сообщество. Новости, фотографии и общение в стиле старого VK.",
+        "members_count": 42,
+        "is_member": 0,
+        "verified": 1,
+        "photo_100": "demo:DemoClub",
+        "can_post": 0
+      }
+    ]
+  },
+  "groups.getById": [
+    {
+      "id": 100,
+      "name": "OpenVK Classic • демогруппа",
+      "description": "Тестовое сообщество. Новости, фотографии и общение в стиле старого VK.",
+      "members_count": 42,
+      "is_member": 0,
+      "verified": 1,
+      "photo_100": "demo:DemoClub",
+      "can_post": 0
+    }
+  ],
+  "groups.search": {
+    "count": 1,
+    "items": [
+      {
+        "id": 100,
+        "name": "OpenVK Classic • демогруппа",
+        "description": "Тестовое сообщество. Новости, фотографии и общение в стиле старого VK.",
+        "members_count": 42,
+        "is_member": 0,
+        "verified": 1,
+        "photo_100": "demo:DemoClub",
+        "can_post": 0
+      }
+    ]
+  },
+  "notifications.get": {
+    "count": 2,
+    "last_viewed": 1,
+    "profiles": [
+      {
+        "id": 1,
+        "first_name": "Алексей",
+        "last_name": "Соколов",
+        "photo_100": "demo:DemoAlex",
+        "status": "Возвращаемся в 2012-й.",
+        "online": 1,
+        "city": {
+          "city": "Санкт-Петербург"
+        },
+        "counters": {
+          "friends": 42,
+          "photos": 18
+        }
+      },
+      {
+        "id": 2,
+        "first_name": "Анна",
+        "last_name": "Морозова",
+        "photo_100": "demo:DemoAnna",
+        "status": "Ловлю свет и хорошие моменты",
+        "online": 1
+      },
+      {
+        "id": 3,
+        "first_name": "Дмитрий",
+        "last_name": "Волков",
+        "photo_100": "demo:Avatar",
+        "online": 0
+      }
+    ],
+    "groups": [],
+    "items": [
+      {
+        "type": "like_post",
+        "date": 1730000000,
+        "feedback": {
+          "items": [
+            {
+              "from_id": 2
+            }
+          ]
+        },
+        "parent": {
+          "type": "post",
+          "owner_id": 1,
+          "id": 12
+        }
+      },
+      {
+        "type": "friend_accepted",
+        "date": 1730000001,
+        "feedback": {
+          "items": [
+            {
+              "from_id": 2
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "notifications.markAsViewed": 1
 }

@@ -1,3 +1,4 @@
+#import "OVKSocial.h"
 #import "OVKPerformance.h"
 #import "OVKLanguage.h"
 #import "OVKUI.h"
@@ -131,7 +132,7 @@ static UIImage *OVKMenuGlyph(void) {
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)path {
     UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
     NSString *mode=[self menuModes][path.row];
-    NSString *icon=@{@"friends":@"Friends",@"photo":@"PhotoMedia",@"dialogs":@"Messages",@"news":@"News",@"profile":@"Profile",@"audio":@"AudioMedia",@"video":@"VideoMedia",@"archive":@"News",@"settings":@"Settings"}[mode];
+    NSString *icon=@{@"notifications":@"Answers",@"groups":@"Groups",@"friends":@"Friends",@"photo":@"PhotoMedia",@"dialogs":@"Messages",@"news":@"News",@"profile":@"Profile",@"audio":@"AudioMedia",@"video":@"VideoMedia",@"archive":@"News",@"settings":@"Settings"}[mode];
     cell.textLabel.hidden=UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad && [self.selected isEqualToString:@"dialogs"]; cell.accessibilityLabel=[self menuTitle:mode];
     cell.textLabel.text=[self menuTitle:mode]; cell.textLabel.font=[UIFont boldSystemFontOfSize:17]; cell.textLabel.textColor=[UIColor colorWithWhite:.83 alpha:1]; cell.textLabel.backgroundColor=[UIColor clearColor]; cell.textLabel.shadowColor=[UIColor blackColor]; cell.textLabel.shadowOffset=CGSizeMake(0,-1);
     cell.imageView.image=[UIImage imageNamed:icon]; cell.backgroundView=[[UIImageView alloc] initWithImage:[UIImage imageNamed:@"MenuRow"]]; cell.selectedBackgroundView=[[UIImageView alloc] initWithImage:OVKThemeChrome(@"MenuSelected")]; cell.textLabel.highlightedTextColor=[UIColor whiteColor]; return cell;
@@ -150,6 +151,7 @@ static UIImage *OVKMenuGlyph(void) {
         else if ([mode isEqualToString:@"dialogs"] && UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad) page=[[OVKMessagesController alloc] init];
         else if ([mode isEqualToString:@"audio"]) page=[[OVKMusicController alloc] init];
         else if ([@[@"photo",@"video"] containsObject:mode]) page = [[OVKLibraryController alloc] initWithKind:mode identifier:[OVKAPI shared].userID title:title];
+        else if ([mode isEqualToString:@"groups"] || [mode isEqualToString:@"notifications"]) page=[[OVKSocialController alloc] initWithSection:mode];
         else page = [[OVKListController alloc] initWithMode:mode identifier:[OVKAPI shared].userID title:title];
         nav = [[OVKNavigationController alloc] initWithRootViewController:page]; OVKStyleNavigation(nav); if ([page isKindOfClass:[OVKMessagesController class]]) [nav setNavigationBarHidden:YES animated:NO]; self.sections[mode] = nav;
     }

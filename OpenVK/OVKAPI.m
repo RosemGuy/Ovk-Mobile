@@ -306,8 +306,9 @@ static NSError *OVKError(NSInteger code, NSString *message) {
         if ([method isEqualToString:@"wall.get"]) {
             NSMutableArray *posts = [NSMutableArray array];
             for (NSDictionary *post in OVKArray(fixtures[@"demo.posts"])) if (![OVKString(parameters[@"filter"]) isEqualToString:@"archived"]) if ([OVKString(post[@"owner_id"]) isEqualToString:OVKString(parameters[@"owner_id"])]) { if ([OVKString(parameters[@"filter"]) isEqualToString:@"owner"] && ![OVKString(post[@"from_id"]) isEqualToString:OVKString(post[@"owner_id"])]) continue; [posts addObject:post]; }
-            response = @{@"count":@(posts.count),@"items":posts,@"profiles":fixtures[@"demo.users"]};
+            response = @{@"count":@(posts.count),@"items":posts,@"profiles":fixtures[@"demo.users"],@"groups":OVKArray(OVKDictionary(fixtures[@"groups.get"])[@"items"])};
         }
+        if ([method isEqualToString:@"groups.getById"]) { NSMutableArray *groups=[NSMutableArray array]; for (NSDictionary *group in OVKArray(fixtures[@"groups.getById"])) if ([OVKString(group[@"id"]) isEqualToString:OVKString(parameters[@"group_id"])]) [groups addObject:group]; response=groups; }
         if ([method isEqualToString:@"wall.getComments"]) {
             NSMutableArray *comments=[NSMutableArray array];
             for (NSDictionary *comment in OVKArray(OVKDictionary(fixtures[@"wall.getComments"])[@"items"])) if ([OVKString(comment[@"owner_id"]) isEqualToString:OVKString(parameters[@"owner_id"])] && [OVKString(comment[@"post_id"]) isEqualToString:OVKString(parameters[@"post_id"])]) [comments addObject:comment];

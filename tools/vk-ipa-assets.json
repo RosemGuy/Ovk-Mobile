@@ -199,6 +199,60 @@
         60
       ]
     },
+    "Answers.png": {
+      "source": "Payload/vkclient.app/left_answers.png",
+      "source_sha256": "ce6dad3dae51219a6612514e59f3cc6f108ebd967da5a23eb2f6c8fe0df6628b",
+      "sha256": "69e171b5f7076b3e02377a5ef30acf537af8f61f642a0cb999bb6cca4411caf0",
+      "size": [
+        31,
+        31
+      ]
+    },
+    "Answers@2x.png": {
+      "source": "Payload/vkclient.app/left_answers@2x.png",
+      "source_sha256": "50e6d6d6fb888aa8ffe4ad19f6e1fa90a966d8b30f7388ce0d70d3f37cbd4454",
+      "sha256": "2a0ff59a03ab16cadaedca6668822b2b02fb0aa0c2af980439b2e7577e9cdd5e",
+      "size": [
+        62,
+        62
+      ]
+    },
+    "Groups.png": {
+      "source": "Payload/vkclient.app/left_groups.png",
+      "source_sha256": "a193299995a7bdedff0668c52429f86319bd523af18c00ca2a8fe8434a3795dd",
+      "sha256": "c287f74b838fc86bc041dbf10458c18946ccedf0173fabe61da02883b5bfbc6b",
+      "size": [
+        31,
+        31
+      ]
+    },
+    "Groups@2x.png": {
+      "source": "Payload/vkclient.app/left_groups@2x.png",
+      "source_sha256": "990b98f3eca3cbc5882e79b64b1c106d5eafdeea3797b5a2820e7c9139e3b21a",
+      "sha256": "1c86e7f78d3b814a27324592656e38023f5322346bd482136599aba373b636cd",
+      "size": [
+        62,
+        62
+      ]
+    },
+    "GroupPlaceholder.png": {
+      "source": "Payload/vkclient.app/group_placeholder_50px.png",
+      "source_sha256": "eb2670f183150e3964b2c0726438dd124e0ffe5e647b5ba05fa25f5e152b53b7",
+      "sha256": "f21a01fddbc78f86659b22e523af7eab840eb550dd082ab946acee3e4fa5bce2",
+      "size": [
+        50,
+        50
+      ]
+    },
+    "GroupPlaceholder@2x.png": {
+      "source": "Payload/vkclient.app/group_placeholder_50px@2x.png",
+      "source_sha256": "5ffb8ab2b6dd978c1b23830cf362ab896d04cb839b87f639f1c2adef7b8dd7cb",
+      "sha256": "5cee5daa7c1576f9d5cfedaece3bcb8b2a19e3972ac893f5fa3465246b0374fd",
+      "size": [
+        100,
+        100
+      ]
+    },
     "News.png": {
       "source": "Payload/vkclient.app/left_news.png",
       "source_sha256": "cf0d42b6735a850ef3ef47f7030923fef68fddecf82689dfe02d004e10c2d58d",

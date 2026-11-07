@@ -1,11 +1,11 @@
 #import "OVKUI.h"
 #import "OVKAPI.h"
 NSArray *OVKMenuOrder(void) {
-    NSArray *defaults=@[@"profile",@"news",@"dialogs",@"friends",@"photo",@"audio",@"video",@"archive",@"settings"];
+    NSArray *defaults=@[@"profile",@"news",@"notifications",@"dialogs",@"friends",@"groups",@"photo",@"audio",@"video",@"archive",@"settings"];
     NSMutableArray *result=[NSMutableArray array]; for (id saved in [[NSUserDefaults standardUserDefaults] arrayForKey:@"OVKMenuOrder"]) { id mode=[saved isEqual:@"web"] ? @"archive" : saved; if ([defaults containsObject:mode] && ![result containsObject:mode]) [result addObject:mode]; }
-    for (NSString *mode in defaults) if (![result containsObject:mode]) [result addObject:mode]; return result;
+    for (NSUInteger i=0;i<defaults.count;i++) { NSString *mode=defaults[i]; if ([result containsObject:mode]) continue; NSUInteger insertion=0; for (NSUInteger j=i;j>0;j--) { NSUInteger previous=[result indexOfObject:defaults[j-1]]; if (previous!=NSNotFound) { insertion=previous+1; break; } } [result insertObject:mode atIndex:insertion]; } return result;
 }
-NSString *OVKMenuTitle(NSString *mode) { return @{@"friends":OVKL(@"Друзья"),@"photo":OVKL(@"Фотографии"),@"dialogs":OVKL(@"Сообщения"),@"news":OVKL(@"Новости"),@"profile":OVKL(@"Моя страница"),@"audio":OVKL(@"Музыка"),@"video":OVKL(@"Видеозаписи"),@"archive":OVKL(@"Архив записей"),@"settings":OVKL(@"Настройки")}[mode]; }
+NSString *OVKMenuTitle(NSString *mode) { return @{@"notifications":OVKL(@"Ответы"),@"groups":OVKL(@"Группы"),@"friends":OVKL(@"Друзья"),@"photo":OVKL(@"Фотографии"),@"dialogs":OVKL(@"Сообщения"),@"news":OVKL(@"Новости"),@"profile":OVKL(@"Моя страница"),@"audio":OVKL(@"Музыка"),@"video":OVKL(@"Видеозаписи"),@"archive":OVKL(@"Архив записей"),@"settings":OVKL(@"Настройки")}[mode]; }
 @implementation OVKMenuOrderController
 - (void)tableView:(UITableView *)tableView willDisplayHeaderView:(UIView *)view forSection:(NSInteger)section { OVKThemeSection(view); }
 - (void)tableView:(UITableView *)tableView willDisplayFooterView:(UIView *)view forSection:(NSInteger)section { OVKThemeSection(view); }

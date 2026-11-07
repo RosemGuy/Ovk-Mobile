@@ -13,6 +13,9 @@ void OVKStyleNavigation(UINavigationController *navigation);
 @property (copy, nonatomic) NSString *messageDraft;
 @property (copy, nonatomic) void (^draftChanged)(NSString *text);
 - (BOOL)hasPendingMessage;
+- (void)setWallHeaderView:(UIView *)header;
+- (CGFloat)wallContentWidth;
+- (id)initWithPostObject:(NSDictionary *)post profiles:(NSArray *)profiles groups:(NSArray *)groups;
 @end
 @interface OVKAppDelegate : UIResponder <UIApplicationDelegate>
 @property (strong, nonatomic) UIWindow *window;

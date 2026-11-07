@@ -329,5 +329,9 @@
   "Сервер не предоставил аудиодорожку ни в одном доступном варианте": "The server did not provide audio in any available rendition",
   "В этом файле нет аудиодорожки": "This file has no audio track",
   "Подготовка совместимого видео и звука…": "Preparing compatible video and audio…",
-  "Истекло время подготовки варианта видео": "Video rendition preparation timed out"
+  "Истекло время подготовки варианта видео": "Video rendition preparation timed out",
+  "iOS не распознаёт кодек аудиодорожки": "iOS does not recognize the audio codec",
+  "iOS не обнаружила аудиодорожку": "iOS did not detect an audio track",
+  "Сохранить файл": "Save file",
+  "Файл сохранён": "File saved"
 }

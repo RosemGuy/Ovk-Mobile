@@ -1,5 +1,6 @@
 #import "OVKMusicLayout.h"
 #import "OVKVideoSound.h"
+#import "OVKMP4Audio.h"
 #import "OVKPerformance.h"
 #import "OVKLanguage.h"
 #import "OVKMedia.h"
@@ -296,6 +297,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
 @property (strong, nonatomic) NSURL *soundFile;
 @property (strong, nonatomic) AVAssetExportSession *exporter;
 @property (assign, nonatomic) BOOL mergingSound;
+@property (assign, nonatomic) BOOL containerHasAudio;
 @property (strong, nonatomic) OVKLocalAudio *music;
 @property (assign, nonatomic) BOOL musicPrepared;
 @property (strong, nonatomic) UIView *musicView;
@@ -396,7 +398,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     self.progress.hidden = YES; [self.spinner stopAnimating]; self.status.text = message;
     if ([self externalURL].length) [[[UIAlertView alloc] initWithTitle:OVKL(@"Нет прямого медиафайла") message:message delegate:self cancelButtonTitle:OVKL(@"Закрыть") otherButtonTitles:OVKL(@"Открыть в Safari"),nil] show];
 }
-- (void)alertView:(UIAlertView *)alert clickedButtonAtIndex:(NSInteger)index { if (index == 1) [[UIApplication sharedApplication] openURL:[NSURL URLWithString:[self externalURL]]]; }
+- (void)alertView:(UIAlertView *)alert clickedButtonAtIndex:(NSInteger)index { if (alert.tag==281) { if (index==1) [self saveVideoForInspection]; return; } if (index == 1) [[UIApplication sharedApplication] openURL:[NSURL URLWithString:[self externalURL]]]; }
 - (void)resolveAndLoad {
     if (self.task || self.movie || self.music || self.asset || self.resolving) return; self.stopped = NO; [self beginAudioTask]; self.progress.hidden = NO; self.status.text = OVKL(@"Получаем адрес медиафайла…"); [self.spinner startAnimating];
     BOOL isVideo=[self.item[@"type"] isEqualToString:@"video"];
@@ -464,10 +466,19 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     if (![self.item[@"type"] isEqualToString:@"video"]) { [self prepareLocalAudio]; return; }
     // Inspect locally downloaded data asynchronously. No AVAudioPlayer file open/prepare on the UI thread.
     self.asset=[AVURLAsset URLAssetWithURL:self.localFile options:nil];
+    NSURL *inspectionFile=self.localFile;
     __weak OVKPlaybackController *weakSelf=self;
     [self.asset loadValuesAsynchronouslyForKeys:@[@"playable",@"tracks",@"duration"] completionHandler:^{
+        NSData *bytes=[NSData dataWithContentsOfURL:inspectionFile options:NSDataReadingMappedIfSafe error:NULL];
+        OVKMP4AudioInfo raw=OVKInspectMP4Audio(bytes.bytes,bytes.length);
         dispatch_async(dispatch_get_main_queue(), ^{
             OVKPlaybackController *page=weakSelf; if (!page || page.stopped || generation!=page.playbackGeneration) return;
+            page.containerHasAudio=raw.valid && raw.audioTracks>0;
+            if (raw.valid) {
+                NSMutableArray *codecs=[NSMutableArray array];
+                for (unsigned i=0;i<raw.codecCount;i++) { NSString *codec=[[NSString alloc] initWithBytes:raw.codecs[i] length:4 encoding:NSASCIIStringEncoding]; [codecs addObject:codec ?: @"????"]; }
+                [page.diagnostics addObject:[NSString stringWithFormat:@"MP4 raw: audio=%u, codecs=%@",raw.audioTracks,[codecs componentsJoinedByString:@", "]]];
+            }
             [page assetPrepared];
         });
     }];
@@ -526,7 +537,10 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
             }
             if (sound && !self.mergingSound && OVKVideoAudioNeedsConversion(sound) && OVKVideoAudioURL(OVKDictionary(self.item[@"object"])).length) { [self fetchVideoSound]; return; }
             if (sound && !self.mergingSound && (!sound.enabled || sound.preferredVolume<=0 || OVKVideoAudioNeedsConversion(sound))) { [self exportVideoWithSound:self.asset]; return; }
-            if (!audio) { [self.diagnostics addObject:OVKL(@"Сервер не предоставил аудиодорожку ни в одном доступном варианте")]; self.navigationItem.prompt=OVKL(@"В этом файле нет аудиодорожки"); }
+            if (!audio) {
+                NSString *message=self.containerHasAudio ? OVKL(@"iOS не распознаёт кодек аудиодорожки") : OVKL(@"iOS не обнаружила аудиодорожку");
+                [self.diagnostics addObject:message]; self.navigationItem.prompt=message;
+            }
         } else [self.diagnostics addObject:@"Предварительная проверка недоступна; пробуем системный плеер"];
         // AVURLAsset's track inspection is diagnostic, not a veto for the movie player.
         self.movie=[[MPMoviePlayerController alloc] initWithContentURL:self.localFile];
@@ -773,7 +787,18 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     AVAudioSessionRouteDescription *route=audioSession.currentRoute;
     NSMutableArray *ports=[NSMutableArray array]; for (AVAudioSessionPortDescription *port in route.outputs) [ports addObject:port.portType ?: @"?"];
     NSString *state=self.music ? [NSString stringWithFormat:@"AVAudioPlayer playing=%d, time=%.2f/%.2f",self.music.playing,self.musicPosition,self.musicDuration] : [NSString stringWithFormat:@"Movie state=%ld, load=%lu",(long)self.movie.playbackState,(unsigned long)self.movie.loadState];
-    OVKAlert(OVKL(@"Проверка воспроизведения"),[NSString stringWithFormat:@"%@\nВыход: %@\nfiles: %@\n%@",state,[ports componentsJoinedByString:@", "],[keys componentsJoinedByString:@", "],[self.diagnostics componentsJoinedByString:@"\n"]]);
+    NSString *message=[NSString stringWithFormat:@"%@\nВыход: %@\nfiles: %@\n%@",state,[ports componentsJoinedByString:@", "],[keys componentsJoinedByString:@", "],[self.diagnostics componentsJoinedByString:@"\n"]];
+    UIAlertView *alert=[[UIAlertView alloc] initWithTitle:OVKL(@"Проверка воспроизведения") message:message delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil];
+    if (self.localFile && [self.item[@"type"] isEqualToString:@"video"]) [alert addButtonWithTitle:OVKL(@"Сохранить файл")]; alert.tag=281; [alert show];
+}
+- (void)saveVideoForInspection {
+    if (!self.localFile) return;
+    NSString *documents=[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES) objectAtIndex:0];
+    NSString *name=[NSString stringWithFormat:@"Video-check-%@.%@",[[NSProcessInfo processInfo] globallyUniqueString],self.localFile.pathExtension ?: @"mp4"];
+    NSString *path=[documents stringByAppendingPathComponent:name]; NSError *error=nil;
+    if (![[NSFileManager defaultManager] copyItemAtPath:self.localFile.path toPath:path error:&error]) { OVKAlert(OVKL(@"Ошибка"),error.localizedDescription); return; }
+    [[self.diagnostics componentsJoinedByString:@"\n"] writeToFile:[path stringByAppendingString:@".txt"] atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+    OVKAlert(OVKL(@"Файл сохранён"),path);
 }
 - (void)movieEnded:(NSNotification *)note {
     if (![NSThread isMainThread]) { __weak OVKPlaybackController *weakSelf=self; dispatch_async(dispatch_get_main_queue(), ^{ [weakSelf movieEnded:note]; }); return; }

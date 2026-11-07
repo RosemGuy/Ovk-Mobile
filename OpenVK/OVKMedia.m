@@ -113,7 +113,7 @@ static void OVKShowCurrentMusic(UIViewController *controller);
 static void OVKShowBundledVideo(NSString *name,UIViewController *controller);
 static void OVKRouteRemoteControl(UIEvent *event);
 static NSUInteger OVKImageCacheGeneration=0;
-static NSCache *OVKImageCache(void) { static NSCache *cache; static dispatch_once_t once; dispatch_once(&once, ^{ cache=[[NSCache alloc] init]; cache.totalCostLimit=(OVKLowMemoryDevice() ? 4 : 16)*1024*1024; cache.countLimit=OVKLowMemoryDevice() ? 32 : 80; }); return cache; }
+static NSCache *OVKImageCache(void) { static NSCache *cache; static dispatch_once_t once; dispatch_once(&once, ^{ cache=[[NSCache alloc] init]; cache.totalCostLimit=OVKImageCacheByteLimit(); cache.countLimit=OVKImageCacheCountLimit(); }); return cache; }
 static NSOperationQueue *OVKImageDecodeQueue(void) {
     static NSOperationQueue *queue; static dispatch_once_t once; dispatch_once(&once, ^{ queue=[[NSOperationQueue alloc] init]; queue.name=@"Ovk-Mobile image decoding"; queue.maxConcurrentOperationCount=OVKLowMemoryDevice() ? 1 : 2; }); return queue;
 }

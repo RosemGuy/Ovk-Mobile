@@ -35,7 +35,7 @@ for kind in ['project','target']:
  configs=[]
  for mode in ['Debug','Release']:
   common='CLANG_ENABLE_OBJC_ARC = YES; CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR; GCC_C_LANGUAGE_STANDARD = gnu99; IPHONEOS_DEPLOYMENT_TARGET = 6.0; SDKROOT = iphoneos;'
-  if kind=='target':common+=' ARCHS = "$(ARCHS_STANDARD_32_BIT)"; TARGETED_DEVICE_FAMILY = "1,2"; INFOPLIST_FILE = OpenVK/Info.plist; PRODUCT_NAME = OpenVKClassic; PRODUCT_BUNDLE_IDENTIFIER = org.openvk.classic.ios6; "CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";'
+  if kind=='target':common+=' ARCHS = "$(ARCHS_STANDARD)"; TARGETED_DEVICE_FAMILY = "1,2"; INFOPLIST_FILE = OpenVK/Info.plist; PRODUCT_NAME = OpenVKClassic; PRODUCT_BUNDLE_IDENTIFIER = org.openvk.classic.ios6; "CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";'
   if mode=='Debug':common+=' GCC_OPTIMIZATION_LEVEL = 0; GCC_PREPROCESSOR_DEFINITIONS = ("DEBUG=1","$(inherited)",); ONLY_ACTIVE_ARCH = YES;'
   else:common+=' GCC_OPTIMIZATION_LEVEL = s; ONLY_ACTIVE_ARCH = NO;'
   configs.append(obj(kind+mode,f'isa = XCBuildConfiguration; buildSettings = {{ {common} }}; name = {mode};'))

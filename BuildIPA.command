@@ -1,5 +1,5 @@
 #!/bin/bash
-# OS X 10.9 / Xcode 5.1.1. Jailbroken iOS 6-10, 32-bit application.
+# OS X 10.9 / Xcode 5.1.1. Jailbroken iOS 6-10, universal 32/64-bit application.
 set -eu
 set -o pipefail
 cd "$(dirname "$0")"
@@ -56,16 +56,27 @@ xcrun --sdk iphoneos --show-sdk-path >/dev/null
 # Standalone codesign on Mavericks needs the allocator from the selected Xcode.
 export CODESIGN_ALLOCATE="$(xcrun --find codesign_allocate)"
 if [ ! -x "$CODESIGN_ALLOCATE" ]; then echo 'codesign_allocate is unavailable.' >&2; exit 1; fi
+# SDK 7 introduced arm64. Xcode 5.1.1 / SDK 7.1 can keep iOS 6 support
+# in the armv7 slice while also compiling a native slice for iPhone 5s.
+sdk_version="$(xcrun --sdk iphoneos --show-sdk-version)"
+sdk_major="${sdk_version%%.*}"
+case "$sdk_major" in ''|*[!0-9]*) echo "Invalid iPhoneOS SDK version: $sdk_version" >&2; exit 1;; esac
+build_architectures='armv7 armv7s'
+if [ "$sdk_major" -ge 7 ]; then
+    build_architectures="$build_architectures arm64"
+else
+    echo 'This SDK cannot build arm64. Use Xcode 5.1.1 / iOS SDK 7.1 for iPhone 5s.'
+fi
 stage='device build'
-echo 'Building for a real iPhone (armv7 / armv7s)...'
+echo "Building for a real iPhone ($build_architectures)..."
 set +e
 xcodebuild -project OpenVKClassic.xcodeproj -scheme OpenVKClassic \
     -configuration Release -sdk iphoneos \
-    ARCHS='armv7 armv7s' ONLY_ACTIVE_ARCH=NO \
+    ARCHS="$build_architectures" ONLY_ACTIVE_ARCH=NO \
     CODE_SIGN_IDENTITY='' 'CODE_SIGN_IDENTITY[sdk=iphoneos*]=' \
     CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO CODE_SIGN_ENTITLEMENTS='' \
     CONFIGURATION_BUILD_DIR="$project_dir/build-ipa/Release-iphoneos" \
-    build 2>&1 | tee "$project_dir/build-ipa.log"
+    clean build 2>&1 | tee "$project_dir/build-ipa.log"
 build_results=("${PIPESTATUS[@]}")
 set -e
 if [ "${build_results[0]}" -ne 0 ] || [ "${build_results[1]}" -ne 0 ]; then
@@ -86,7 +97,12 @@ if ! architecture_info="$(xcrun lipo -info "$app_path/OpenVKClassic" 2>&1)"; the
 fi
 architectures="${architecture_info##*: }"
 case " $architectures " in *' i386 '*|*' x86_64 '*) echo "Simulator architecture: $architecture_info" >&2; exit 1;; esac
-case " $architectures " in *' armv7 '*|*' armv7s '*) ;; *) echo "Wrong architecture: $architecture_info" >&2; exit 1;; esac
+for required_architecture in $build_architectures; do
+    case " $architectures " in
+        *" $required_architecture "*) ;;
+        *) echo "Missing $required_architecture in device build: $architecture_info" >&2; exit 1;;
+    esac
+done
 stage='ad-hoc signature'
 package_dir="$(mktemp -d "${TMPDIR:-/tmp}/ovk-ipa.XXXXXX")"
 mkdir "$package_dir/Payload"

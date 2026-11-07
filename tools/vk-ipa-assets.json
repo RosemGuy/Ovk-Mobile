@@ -679,6 +679,78 @@
         62
       ]
     },
+    "BubbleIncomingSelected.png": {
+      "source": "Payload/vkclient.app/Grey_Bubble_Selected.png",
+      "source_sha256": "7d49d348336154c1bd42f284cc7a116b9f28c36104aec572694fcf5d41a53067",
+      "sha256": "3e4dcb2cb5f5223b59e526df9c10b1aecf201a6443036d39587b5c0e360205df",
+      "size": [
+        40,
+        31
+      ]
+    },
+    "BubbleIncomingSelected@2x.png": {
+      "source": "Payload/vkclient.app/Grey_Bubble_Selected@2x.png",
+      "source_sha256": "4d53ae8267dd3a44d27c43a10069f8fde3c7ac5c86bfc75e825c4c2f90b65b55",
+      "sha256": "5fb41d1daee5a1984329bff3b291e032259c32858cb4989a5f467d46cfa81219",
+      "size": [
+        80,
+        62
+      ]
+    },
+    "BubbleOutgoingSelected.png": {
+      "source": "Payload/vkclient.app/Blue_Bubble_Selected.png",
+      "source_sha256": "0fca1ad1801700f5056abcd79e0a3ca876b7d9d7a173fcda4e1dcd190be25b7c",
+      "sha256": "e474fa029828d4190ecbb808d546758fa1077888091771429b308b1084798a6d",
+      "size": [
+        40,
+        31
+      ]
+    },
+    "BubbleOutgoingSelected@2x.png": {
+      "source": "Payload/vkclient.app/Blue_Bubble_Selected@2x.png",
+      "source_sha256": "ff16a5db2dfdf1f6a50a59a50e29100390b43a0c9eb4354b565fc97ed6470b82",
+      "sha256": "4e7d5ca1b17ce5d127e233f793862abab612255c9615f3e3ebd90ba395a0c46f",
+      "size": [
+        80,
+        62
+      ]
+    },
+    "MessageUnreadBadge.png": {
+      "source": "Payload/vkclient.app/left_badge.png",
+      "source_sha256": "11c05fbde2b980eb6ee067370c18f3cc654266ee7d5ef6539edb39c07b065077",
+      "sha256": "5b88ebf17c533733f02453f9f211257f20bb9093c0dbea5204ca3d3a9f915e93",
+      "size": [
+        29,
+        27
+      ]
+    },
+    "MessageUnreadBadge@2x.png": {
+      "source": "Payload/vkclient.app/left_badge@2x.png",
+      "source_sha256": "7cdeda62bbb7729da6c0c9fa9773ab0750970bad6391ab4c258e330fdb3de7c5",
+      "sha256": "6ed504cbf42b8843771ba60fd8083966697d6688fe0c833023814094765376ac",
+      "size": [
+        58,
+        54
+      ]
+    },
+    "MessageGroupGlyph.png": {
+      "source": "Payload/vkclient.app/MessagesGroup.png",
+      "source_sha256": "565b31a86989884666300b6b9ea7a0d2e18fbc544b8606dd8a8431a78eb81a5d",
+      "sha256": "f2cf2cedc7bbab55a972e78ee95ad538a08f95631889f5f34319e75340e087e8",
+      "size": [
+        15,
+        11
+      ]
+    },
+    "MessageGroupGlyph@2x.png": {
+      "source": "Payload/vkclient.app/MessagesGroup@2x.png",
+      "source_sha256": "c2d4724589167fe4c10746e3081efee2af475b88e406b6cc30d599ea0fd42178",
+      "sha256": "665a7ed1a11c63c6bd995fb8d5c3db92530ef6b5b7afe9b6028ead4ad293b959",
+      "size": [
+        30,
+        22
+      ]
+    },
     "ComposeGlyph.png": {
       "source": "Payload/vkclient.app/newpost_icon.png",
       "source_sha256": "19a2c4c8570f43ac922cd3db14dd7a7b79c5f47aa14838e642a9d073401cad29",

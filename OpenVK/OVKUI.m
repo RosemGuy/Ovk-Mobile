@@ -118,6 +118,10 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 @property (assign, nonatomic) BOOL postStyle;
 @property (assign, nonatomic) BOOL dialogStyle;
 @property (assign, nonatomic) BOOL activeDialog;
+@property (assign, nonatomic) BOOL conversationGroup;
+@property (strong, nonatomic) UIImageView *groupGlyph;
+@property (strong, nonatomic) UIImageView *unreadBadgeSkin;
+@property (strong, nonatomic) OVKRemoteImageView *previewAvatar;
 @property (copy, nonatomic) NSString *measuredText;
 @property (assign, nonatomic) CGFloat measuredWidth;
 @property (assign, nonatomic) CGFloat measuredFontSize;
@@ -151,6 +155,10 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
         self.morePhotos=[[UILabel alloc] init]; self.morePhotos.backgroundColor=[UIColor colorWithWhite:0 alpha:.5]; self.morePhotos.textColor=[UIColor whiteColor]; self.morePhotos.font=[UIFont boldSystemFontOfSize:23]; self.morePhotos.textAlignment=NSTextAlignmentCenter; [self.contentView addSubview:self.morePhotos];
         self.commentButton=[UIButton buttonWithType:UIButtonTypeCustom]; self.commentButton.accessibilityLabel=OVKL(@"Комментарии"); [self.commentButton addTarget:self action:@selector(tapComments) forControlEvents:UIControlEventTouchUpInside]; [self.contentView addSubview:self.commentButton];
         self.unreadBadge=[[UILabel alloc] init]; self.unreadBadge.backgroundColor=OVKBlue(); self.unreadBadge.textColor=[UIColor whiteColor]; self.unreadBadge.font=[UIFont boldSystemFontOfSize:12]; self.unreadBadge.textAlignment=NSTextAlignmentCenter; self.unreadBadge.layer.cornerRadius=9; self.unreadBadge.clipsToBounds=YES; [self.contentView addSubview:self.unreadBadge];
+        self.unreadBadge.backgroundColor=[UIColor clearColor]; self.unreadBadge.layer.cornerRadius=0;
+        self.unreadBadgeSkin=[[UIImageView alloc] init]; [self.contentView insertSubview:self.unreadBadgeSkin belowSubview:self.unreadBadge];
+        self.groupGlyph=[[UIImageView alloc] init]; self.groupGlyph.contentMode=UIViewContentModeScaleAspectFit; [self.contentView addSubview:self.groupGlyph];
+        self.previewAvatar=[[OVKRemoteImageView alloc] init]; self.previewAvatar.maxPixelSize=48; self.previewAvatar.contentMode=UIViewContentModeScaleAspectFill; self.previewAvatar.clipsToBounds=YES; self.previewAvatar.hidden=YES; [self.contentView addSubview:self.previewAvatar];
         self.likeButton=[UIButton buttonWithType:UIButtonTypeCustom]; [self.likeButton addTarget:self action:@selector(tapLike) forControlEvents:UIControlEventTouchUpInside]; [self.contentView addSubview:self.likeButton];
         self.stamp = [[UILabel alloc] init]; self.stamp.font = [UIFont systemFontOfSize:11]; self.stamp.textColor = [UIColor grayColor];
         for (UIView *v in @[self.avatar,self.heading,self.bodyLabel,self.stamp,self.photo]) [self.contentView addSubview:v];
@@ -163,10 +171,14 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 - (void)tapComments { if (self.commentTapped) self.commentTapped(); }
 - (void)tapPhoto { if (self.photoTapped) self.photoTapped(); }
 - (void)tapAvatar { if (self.avatarTapped) self.avatarTapped(); }
+- (void)setHighlighted:(BOOL)highlighted animated:(BOOL)animated { [super setHighlighted:highlighted animated:animated]; if (self.dialogStyle || self.chatStyle) [self setNeedsLayout]; }
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated { [super setSelected:selected animated:animated]; if (self.dialogStyle || self.chatStyle) [self setNeedsLayout]; }
 - (void)layoutSubviews {
     [super layoutSubviews]; CGFloat width = self.contentView.bounds.size.width; CGFloat height = self.contentView.bounds.size.height;
     CGFloat photoHeight = self.photo.hidden ? 0 : self.photoDisplayHeight;
-    self.unreadBadge.hidden=!self.dialogStyle || !self.unread;
+    self.unreadBadge.hidden=!self.dialogStyle || !self.unread; self.unreadBadgeSkin.hidden=self.unreadBadge.hidden;
+    self.groupGlyph.hidden=!self.dialogStyle || !self.conversationGroup; self.groupGlyph.image=OVKThemeIcon(@"MessageGroupGlyph");
+    self.previewAvatar.hidden=!self.dialogStyle || !self.previewAvatar.source.length;
     self.bodyLabel.textColor=OVKThemeText(); self.stamp.textColor=OVKThemeSecondary(); self.heading.textColor=OVKThemeAccent();
     self.contentView.opaque=!self.chatStyle; self.postHeader.opaque=YES; self.postFooter.opaque=YES;
     self.contentView.backgroundColor=self.chatStyle ? [UIColor clearColor] : OVKThemeSurface();
@@ -178,31 +190,37 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     for (NSUInteger index=0;index<self.extraPhotos.count;index++) { UIImageView *image=self.extraPhotos[index]; image.hidden=!self.postStyle || self.photoCount<index+2; }
     self.morePhotos.hidden=!self.postStyle || self.photoCount<=3;
     self.bubble.hidden = !self.chatStyle; self.metrics.hidden = !self.postStyle; self.likes.hidden = !self.postStyle; self.likeButton.hidden=!self.postStyle; self.likeIcon.hidden=!self.postStyle; self.likeIcon.image=OVKThemeIcon(self.liked ? @"PostLikeActive" : @"PostLike");
-    self.heading.hidden = self.chatStyle; self.avatar.hidden = self.chatStyle && self.outgoing;
+    self.heading.hidden = self.chatStyle; self.avatar.hidden = self.chatStyle && (self.outgoing || !self.conversationGroup);
     self.backgroundView.hidden = self.chatStyle || OVKDarkTheme();
     if (self.dialogStyle) {
         self.backgroundView.hidden=YES; BOOL selected=self.activeDialog || self.selected || self.highlighted; self.contentView.backgroundColor=selected ? OVKThemeAccent() : (self.unread ? (OVKDarkTheme() ? [UIColor colorWithRed:.22 green:.28 blue:.35 alpha:1] : [UIColor colorWithRed:.88 green:.91 blue:.94 alpha:1]) : OVKThemeSurface());
-        self.avatar.frame=CGRectMake(8,9,56,56); self.avatar.layer.cornerRadius=OVKLowMemoryDevice() ? 0 : 5;
-        self.heading.font=[UIFont boldSystemFontOfSize:16]; self.heading.textColor=selected ? [UIColor whiteColor] : OVKThemeText(); self.heading.frame=CGRectMake(74,8,MAX(40,width-157),22);
-        self.stamp.textAlignment=NSTextAlignmentRight; self.stamp.frame=CGRectMake(width-80,10,70,18);
-        self.bodyLabel.font=[UIFont systemFontOfSize:14]; self.bodyLabel.textColor=selected ? [UIColor whiteColor] : OVKThemeSecondary(); self.stamp.textColor=self.bodyLabel.textColor; self.bodyLabel.numberOfLines=2; self.bodyLabel.frame=CGRectMake(74,33,width-(self.unread ? 119 : 84),36); self.unreadBadge.frame=CGRectMake(width-38,43,28,20);
+        self.avatar.frame=CGRectMake(8,12,50,50); self.avatar.layer.cornerRadius=0;
+        CGFloat headingX=self.conversationGroup ? 88 : 68;
+        self.groupGlyph.frame=CGRectMake(68,15,15,11);
+        self.heading.font=[UIFont boldSystemFontOfSize:15]; self.heading.textColor=selected ? [UIColor whiteColor] : OVKThemeText(); self.heading.frame=CGRectMake(headingX,9,MAX(35,width-headingX-82),22);
+        self.stamp.textAlignment=NSTextAlignmentRight; self.stamp.frame=CGRectMake(width-80,11,70,18);
+        CGFloat previewX=self.previewAvatar.hidden ? 68 : 96;
+        self.previewAvatar.frame=CGRectMake(68,36,23,23);
+        self.bodyLabel.font=[UIFont systemFontOfSize:14]; self.bodyLabel.textColor=selected ? [UIColor whiteColor] : OVKThemeSecondary(); self.stamp.textColor=self.bodyLabel.textColor; self.bodyLabel.numberOfLines=2; self.bodyLabel.frame=CGRectMake(previewX,34,MAX(30,width-previewX-(self.unread ? 45 : 10)),34);
+        self.unreadBadge.frame=CGRectMake(width-39,38,29,27); self.unreadBadgeSkin.frame=self.unreadBadge.frame; self.unreadBadgeSkin.image=OVKThemeStretch(@"MessageUnreadBadge");
         self.photo.hidden=YES;
     } else if (self.chatStyle) {
-        CGFloat maxWidth = width-76;
+        CGFloat maxWidth=width-(self.conversationGroup && !self.outgoing ? 114 : 74);
         CGFloat textWidth=maxWidth-22;
         if (self.measuredWidth!=textWidth || self.measuredFontSize!=self.bodyLabel.font.pointSize || ![self.measuredText isEqualToString:self.bodyLabel.text]) {
             self.measuredText=self.bodyLabel.text; self.measuredWidth=textWidth; self.measuredFontSize=self.bodyLabel.font.pointSize;
             self.measuredBodySize=[self.bodyLabel.text sizeWithFont:self.bodyLabel.font constrainedToSize:CGSizeMake(textWidth,20000) lineBreakMode:NSLineBreakByWordWrapping];
         }
         CGSize bodySize=self.measuredBodySize;
-        CGFloat bubbleWidth = self.photo.hidden ? MIN(maxWidth,MAX(115,ceil(bodySize.width)+22)) : maxWidth;
-        CGFloat x = self.outgoing ? width-bubbleWidth-10 : 48;
-        self.bubble.image = OVKThemeStretch(self.outgoing ? @"BubbleOutgoing" : @"BubbleIncoming");
-        self.bubble.frame = CGRectMake(x,6,bubbleWidth,height-12);
+        CGFloat bubbleWidth=self.photo.hidden ? MIN(maxWidth,MAX(50,ceil(bodySize.width)+22)) : maxWidth;
+        CGFloat x=self.outgoing ? width-bubbleWidth-8 : (self.conversationGroup ? 48 : 8);
+        BOOL pressed=self.selected || self.highlighted;
+        self.bubble.image=OVKThemeStretch(self.outgoing ? (pressed ? @"BubbleOutgoingSelected" : @"BubbleOutgoing") : (pressed ? @"BubbleIncomingSelected" : @"BubbleIncoming"));
+        self.bubble.frame=CGRectMake(x,5,bubbleWidth,height-10);
         self.avatar.frame = CGRectMake(8,MAX(6,height-38),30,30);
-        self.bodyLabel.frame = CGRectMake(x+11,14,bubbleWidth-22,ceil(bodySize.height));
-        self.photo.frame = CGRectMake(x+8,height-32-photoHeight,bubbleWidth-16,photoHeight);
-        self.stamp.frame = CGRectMake(x+8,height-27,bubbleWidth-16,14); self.stamp.textAlignment=NSTextAlignmentRight;
+        self.bodyLabel.frame=CGRectMake(x+11,12,bubbleWidth-22,ceil(bodySize.height));
+        self.photo.frame=CGRectMake(x+8,height-6-photoHeight,bubbleWidth-16,photoHeight);
+        self.stamp.frame=CGRectMake(self.outgoing ? MAX(0,x-58) : x+bubbleWidth+4,height-23,54,14); self.stamp.textAlignment=self.outgoing ? NSTextAlignmentRight : NSTextAlignmentLeft;
     } else if (self.postStyle) {
         self.stamp.textAlignment=NSTextAlignmentLeft;
         self.avatar.frame = CGRectMake(8,7,36,36); self.heading.frame = CGRectMake(53,6,width-63,21);
@@ -568,14 +586,15 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return ([self isProfile] && self.profileInfo) ? [self profileDetails].count : [self visibleItems].count; }
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
     if ([self isProfile] && self.profileInfo) { NSArray *detail=[self profileDetails][indexPath.row]; CGSize size=[OVKString(detail[1]) sizeWithFont:[UIFont systemFontOfSize:14] constrainedToSize:CGSizeMake(tableView.bounds.size.width-110,10000) lineBreakMode:NSLineBreakByWordWrapping]; return MAX(50,ceil(size.height)+22); }
-    if ([self.mode isEqualToString:@"dialogs"]) return 78;
+    if ([self.mode isEqualToString:@"dialogs"]) return 74;
     NSDictionary *post=[self postAt:indexPath.row]; NSNumber *row=@(indexPath.row); NSDictionary *cached=self.rowHeights[row];
     if (cached[@"post"]==post && [cached[@"width"] doubleValue]==tableView.bounds.size.width) return [cached[@"height"] doubleValue];
     NSString *text = [self bodyFor:post];
-    CGFloat textWidth=tableView.bounds.size.width-([self isChat] ? 98 : ([self isFeed] ? 16 : 78));
+    BOOL groupIncoming=[self isChat] && self.identifier.longLongValue>=2000000000LL && ![OVKString(post[@"out"]) boolValue] && ![OVKString(post[@"from_id"]) isEqualToString:OVKString([OVKAPI shared].userID)];
+    CGFloat textWidth=tableView.bounds.size.width-([self isChat] ? (groupIncoming ? 136 : 96) : ([self isFeed] ? 16 : 78));
     CGSize size = [text sizeWithFont:[UIFont systemFontOfSize:[self isFeed] ? OVKFeedTextSize() : 14] constrainedToSize:CGSizeMake(MAX(100,textWidth),([self isPost] || [self isChat]) ? 20000 : 110) lineBreakMode:NSLineBreakByWordWrapping];
-    CGFloat imageHeight=OVKPostPhotoHeight([self postAt:indexPath.row],tableView.bounds.size.width-([self isChat] ? 92 : ([self isFeed] ? 0 : 94)),[self isFeed]);
-    CGFloat height=[self isChat] ? MAX(62,ceil(size.height)+48+imageHeight) : MAX(86,ceil(size.height)+([self isFeed] ? 116 : 62))+imageHeight;
+    CGFloat imageHeight=OVKPostPhotoHeight([self postAt:indexPath.row],tableView.bounds.size.width-([self isChat] ? (groupIncoming ? 130 : 90) : ([self isFeed] ? 0 : 94)),[self isFeed]);
+    CGFloat height=[self isChat] ? MAX(46,ceil(size.height)+24+imageHeight) : MAX(86,ceil(size.height)+([self isFeed] ? 116 : 62))+imageHeight;
     self.rowHeights[row]=@{@"post":post,@"width":@(tableView.bounds.size.width),@"height":@(height)}; return height;
 }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -583,16 +602,21 @@ static CGFloat OVKPostPhotoHeight(NSDictionary *post,CGFloat width,BOOL collage)
     OVKCell *cell = [tableView dequeueReusableCellWithIdentifier:@"entry"];
     if (!cell) cell = [[OVKCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"entry"];
     NSDictionary *item = [self postAt:indexPath.row];
-    NSString *photoURL = OVKPhotoURL(item); cell.photoDisplayHeight=OVKPostPhotoHeight(item,tableView.bounds.size.width-([self isChat] ? 92 : ([self isFeed] ? 0 : 94)),[self isFeed]); cell.photo.hidden = !photoURL.length; if (photoURL.length) [cell.photo load:photoURL];
+    BOOL groupIncoming=[self isChat] && self.identifier.longLongValue>=2000000000LL && ![OVKString(item[@"out"]) boolValue] && ![OVKString(item[@"from_id"]) isEqualToString:OVKString([OVKAPI shared].userID)];
+    NSString *photoURL = OVKPhotoURL(item); cell.photoDisplayHeight=OVKPostPhotoHeight(item,tableView.bounds.size.width-([self isChat] ? (groupIncoming ? 130 : 90) : ([self isFeed] ? 0 : 94)),[self isFeed]); cell.photo.hidden = !photoURL.length; if (photoURL.length) [cell.photo load:photoURL];
     NSArray *photos=OVKPostPhotos(item); cell.photoCount=photos.count;
     for (NSUInteger index=0;index<cell.extraPhotos.count;index++) { OVKRemoteImageView *image=cell.extraPhotos[index]; if ([self isFeed] && index+1<photos.count) [image load:photos[index+1][@"preview"] ?: photos[index+1][@"url"]]; else [image load:@""]; }
     cell.morePhotos.text=photos.count>3 ? [NSString stringWithFormat:@"+%lu",(unsigned long)(photos.count-3)] : @"";
     cell.activeDialog=self.dialogSelected && [self.selectedDialogPeer isEqualToString:OVKString(OVKDictionary(OVKDictionary(item[@"conversation"])[@"peer"])[@"id"])]; cell.dialogStyle=[self.mode isEqualToString:@"dialogs"]; cell.unread=[OVKDictionary(item[@"conversation"])[@"unread_count"] integerValue]>0;
+    cell.conversationGroup=([self isChat] && self.identifier.longLongValue>=2000000000LL) || (cell.dialogStyle && [OVKString(OVKDictionary(OVKDictionary(item[@"conversation"])[@"peer"])[@"id"]) longLongValue]>=2000000000LL);
+    cell.selectionStyle=[self isChat] ? UITableViewCellSelectionStyleNone : UITableViewCellSelectionStyleBlue;
+    NSDictionary *last=OVKDictionary(item[@"last_message"]); NSDictionary *sender=OVKDictionary(self.people[OVKString(last[@"from_id"])]);
+    [cell.previewAvatar load:cell.dialogStyle && [OVKString(last[@"out"]) boolValue] ? OVKString(sender[@"photo_50"] ?: sender[@"photo_100"]) : @""];
     cell.chatStyle = [self isChat]; cell.outgoing = [item[@"out"] boolValue] || [OVKString(item[@"from_id"]) isEqualToString:OVKString([OVKAPI shared].userID)]; cell.postStyle = [self isFeed]; cell.bodyLabel.font=[UIFont systemFontOfSize:[self isFeed] ? OVKFeedTextSize() : 14]; cell.heading.text = [self headingFor:item]; cell.bodyLabel.text = [self bodyFor:item];
     NSDictionary *person = [self.mode isEqualToString:@"friends"] ? item : [self personFor:item];
     if ([self.mode isEqualToString:@"dialogs"]) person = OVKDictionary(self.people[OVKString(OVKDictionary(OVKDictionary(item[@"conversation"])[@"peer"])[@"id"])]);
     if ([OVKString(person[@"verified"]) boolValue] && [self isFeed]) cell.heading.text=[cell.heading.text stringByAppendingString:@" ✓"];
-    [cell.avatar load:OVKString(person[@"photo_100"] ?: person[@"photo_50"])];
+    [cell.avatar load:cell.chatStyle && (cell.outgoing || !cell.conversationGroup) ? @"" : OVKString(person[@"photo_100"] ?: person[@"photo_50"])]; if (cell.dialogStyle && cell.conversationGroup && !cell.avatar.source.length) cell.avatar.image=[UIImage imageNamed:@"GroupPlaceholder"];
     NSString *avatarURL = OVKString(person[@"photo_max_orig"] ?: person[@"photo_200"] ?: person[@"photo_100"] ?: person[@"photo_50"]);
     __weak OVKListController *weakSelf = self; cell.photoTapped=^{
         NSMutableArray *photos=[NSMutableArray array]; for (NSDictionary *attachment in OVKPostAttachments(item)) if ([attachment[@"type"] isEqualToString:@"photo"]) [photos addObject:attachment];

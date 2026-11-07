@@ -119,18 +119,6 @@
     6,
     8
   ],
-  "MenuRow": [
-    1,
-    1,
-    1,
-    1
-  ],
-  "MenuSelected": [
-    1,
-    1,
-    1,
-    1
-  ],
   "LoginField": [
     15,
     14,
@@ -148,5 +136,23 @@
     8,
     6,
     8
+  ],
+  "BubbleIncomingSelected": [
+    15,
+    18,
+    15,
+    18
+  ],
+  "BubbleOutgoingSelected": [
+    15,
+    18,
+    15,
+    18
+  ],
+  "MessageUnreadBadge": [
+    12,
+    13,
+    12,
+    13
   ]
 }

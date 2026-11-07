@@ -11,3 +11,5 @@ Apple CgBI PNG декодированы из BGRA с premultiplied alpha в ст
 Для «Ответов» и «Групп» добавлены ещё три пары: left_answers, left_groups и group_placeholder_50px. Всего импортировано 51 пара; карта и хеши обновлены. Визуальные ориентиры и методы API перечислены в SOCIAL-REFERENCES.md.
 
 Подгон и оптимизация GUI: добавлены black_btn_nav_hl и wall_background. Из wall_background извлечён повторяемый фрагмент 64×64 pt (128×128 px Retina); crop записан в манифесте. Полная карта растяжения — OpenVK/ChromeCaps.json. Подробнее: PERFORMANCE-NOTES.md. Теперь импортировано 53 пары, всего 106 PNG.
+
+Для подгонки сообщений дополнительно импортированы состояния Grey_Bubble_Selected / Blue_Bubble_Selected, фон left_badge и значок MessagesGroup. Всего 57 пар (114 PNG). Назначение ресурсов и визуальный ориентир: MESSAGES-REFERENCES.md. Прежнее отображение подсветки меню сохранено без девятичастного растяжения центральной полосы.

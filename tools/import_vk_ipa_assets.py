@@ -22,6 +22,8 @@ MAP={
  'FooterButton':'wall_gray_btn','FooterButtonPressed':'wall_gray_btn_hl',
  'ProfileCounter':'wall_block','ProfileCounterPressed':'wall_block_hl',
  'BubbleIncoming':'Grey_Bubble','BubbleOutgoing':'Blue_Bubble',
+ 'BubbleIncomingSelected':'Grey_Bubble_Selected','BubbleOutgoingSelected':'Blue_Bubble_Selected',
+ 'MessageUnreadBadge':'left_badge','MessageGroupGlyph':'MessagesGroup',
  'ComposeGlyph':'newpost_icon','PlayTrack':'audioplayer_play','PauseTrack':'audioplayer_pause',
  'NextTrack':'audioplayer_next','PreviousTrack':'audioplayer_previous',
  'MessageBar':'MessageEntryBackground','MessageField':'MessageEntryInputField',

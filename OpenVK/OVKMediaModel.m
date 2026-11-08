@@ -74,7 +74,11 @@ NSArray *OVKPlayableAttachments(NSDictionary *post) {
         else if ([type isEqualToString:@"video"]) { url = OVKDirectVideoURL(object); preview = OVKMediaURL(OVKString(object[@"photo_800"] ?: object[@"photo_320"] ?: object[@"photo_130"])); if (!preview.length) preview = OVKPhotoSource(@{@"sizes":OVKArray(object[@"image"] ?: object[@"images"])}); }
         else if ([type isEqualToString:@"audio_message"] || [type isEqualToString:@"voice"] || [type isEqualToString:@"doc"]) {
             NSDictionary *voice = [type isEqualToString:@"doc"] ? OVKDictionary(OVKDictionary(object[@"preview"])[@"audio_msg"]) : object;
-            if (!voice.count) continue; type = @"audio"; url = OVKMediaURL(OVKString(voice[@"link_mp3"])); title = @"Голосовое сообщение";
+            if (!voice.count) continue;
+            [result addObject:@{@"type":@"audio", @"title":@"Голосовое сообщение",
+                                @"url":OVKMediaURL(OVKString(voice[@"link_mp3"])), @"preview":@"",
+                                @"object":object, @"voice_message":@YES}];
+            continue;
         } else continue;
         if (!title.length) title = [type isEqualToString:@"audio"] ? OVKL(@"Аудиозапись") : OVKL(@"Видеозапись");
         [result addObject:@{@"type":type,@"title":title,@"url":url,@"preview":preview,@"object":object}];

@@ -2,6 +2,7 @@
 #import "OVKLanguage.h"
 #import "OVKUI.h"
 #import "OVKAPI.h"
+#import "OVKDebug.h"
 #import "OVKMusic.h"
 @interface OVKOAuthController : UIViewController <UIWebViewDelegate>
 @property (strong, nonatomic) UIWebView *web;
@@ -21,6 +22,7 @@
     self.web = [[UIWebView alloc] initWithFrame:CGRectMake(0,44,self.view.bounds.size.width,MAX(0,self.view.bounds.size.height-44))]; self.web.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight; self.web.delegate = self; [self.view addSubview:self.web];
     NSString *redirect = [self.server stringByAppendingString:@"/blank.html"];
     NSString *authServer = [self.server isEqualToString:@"https://api.openvk.org"] ? @"https://openvk.org" : self.server;
+    OVKDebugLog(@"[Login] opening OAuth page");
     NSString *url = [NSString stringWithFormat:@"%@/authorize?client_name=%@&redirect_uri=%@&display=page&response_type=token&revoke=0", authServer, OVKEncode(@"OpenVK Classic for iOS 6"), OVKEncode(redirect)];
     [self.web loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:NSURLRequestReloadIgnoringLocalCacheData timeoutInterval:25]];
     self.watchdog = [NSTimer scheduledTimerWithTimeInterval:30 target:self selector:@selector(loadTimeout) userInfo:nil repeats:NO];
@@ -30,6 +32,8 @@
     NSURL *url = request.URL; NSURL *origin = [NSURL URLWithString:self.server];
     if ([url.scheme isEqualToString:@"https"] && [url.host isEqualToString:origin.host] && [(url.port ?: @443) isEqual:(origin.port ?: @443)] && [url.path isEqualToString:@"/blank.html"]) {
         NSDictionary *params = OVKQuery(url.fragment ?: url.query ?: @""); NSString *token = OVKString(params[@"access_token"]);
+        OVKDebugLog(@"[Login] OAuth callback: %@",
+                    token.length ? @"token received" : @"no token");
         if (token.length) {
             void (^callback)(NSString *) = self.received; self.received = nil; [self.watchdog invalidate]; self.watchdog = nil; [self.webSpinner stopAnimating];
             [self dismissViewControllerAnimated:YES completion:^{ if (callback) callback(token); }];
@@ -46,6 +50,7 @@
     return YES;
 }
 - (void)loadTimeout {
+    OVKDebugLog(@"[Login] OAuth page timed out");
     self.watchdog = nil; self.web.delegate = nil; [self.web stopLoading]; [self.webSpinner stopAnimating];
     self.webStatus.text = @"Сервер не загрузил вход за 30 секунд. Нажмите «Отмена» и используйте вход по паролю.";
     OVKAlert(OVKL(@"Вход не загрузился"),@"Сервер не ответил или страница несовместима со старым WebKit. Вернитесь назад и используйте нативный вход по логину и паролю.");
@@ -58,6 +63,7 @@
 }
 - (void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error {
     if (error.code == NSURLErrorCancelled || error.code == 102) return;
+    OVKDebugLog(@"[Login] OAuth page failed (domain=%@, code=%ld)", error.domain, (long)error.code);
     [self.watchdog invalidate]; self.watchdog = nil; [self.webSpinner stopAnimating];
     self.webStatus.text = [NSString stringWithFormat:@"%@ (%@ %ld)",error.localizedDescription,error.domain,(long)error.code]; OVKAlert(@"Не удалось открыть вход",self.webStatus.text);
 }
@@ -82,6 +88,7 @@
     self.web = [[UIWebView alloc] initWithFrame:CGRectMake(0,62,self.view.bounds.size.width,MAX(0,self.view.bounds.size.height-62))]; self.web.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight; self.web.delegate = self; self.web.scalesPageToFit = YES; [self.view addSubview:self.web];
     self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray]; self.spinner.frame = CGRectMake(5,20,20,20); self.spinner.hidesWhenStopped = YES; [self.view addSubview:self.spinner]; [self.spinner startAnimating];
     // Browser verification no longer changes the native API User-Agent (curl).
+    OVKDebugLog(@"[Login] opening server verification");
     NSURL *url = [NSURL URLWithString:[self.server stringByAppendingString:@"/method/ovk.test?v=5.131"]];
     [self.web loadRequest:[NSURLRequest requestWithURL:url cachePolicy:NSURLRequestReloadIgnoringLocalCacheData timeoutInterval:30]];
 }
@@ -99,6 +106,8 @@
 - (void)webViewDidFinishLoad:(UIWebView *)webView { if (!webView.loading) [self.spinner stopAnimating]; }
 - (void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error {
     if (error.code == NSURLErrorCancelled || error.code == 102) return;
+    OVKDebugLog(@"[Login] verification page failed (domain=%@, code=%ld)",
+                error.domain, (long)error.code);
     [self.spinner stopAnimating]; self.status.text = error.localizedDescription;
 }
 - (void)verify {
@@ -147,10 +156,16 @@
     self.username = [self field:OVKL(@"Логин или e-mail") y:48 secure:NO panel:panel]; self.username.keyboardType = UIKeyboardTypeEmailAddress;
     self.password = [self field:OVKL(@"Пароль") y:98 secure:YES panel:panel];
     self.code = [self field:OVKL(@"Код 2FA, если включён") y:148 secure:YES panel:panel]; self.code.keyboardType = UIKeyboardTypeNumberPad; self.code.hidden = YES;
-    self.login = [UIButton buttonWithType:UIButtonTypeCustom]; self.login.frame = CGRectMake(20,154,280,46); OVKStyleAssetButton(self.login,@"LoginButton"); [self.login setTitle:OVKL(@"Войти") forState:UIControlStateNormal]; self.login.titleLabel.font = [UIFont boldSystemFontOfSize:16]; [self.login addTarget:self action:@selector(submit) forControlEvents:UIControlEventTouchUpInside]; [panel addSubview:self.login];
+    self.login = [UIButton buttonWithType:UIButtonTypeCustom];
+    self.login.frame = CGRectMake(20,154,280,46);
+    OVKStyleAssetButton(self.login,@"ProfileBlueButton");
+    [self.login setBackgroundImage:OVKThemeStretch(@"LoginButton") forState:UIControlStateDisabled];
+    [self.login setTitle:OVKL(@"Войти") forState:UIControlStateNormal];
+    self.login.titleLabel.font = [UIFont boldSystemFontOfSize:16];
+    [self.login addTarget:self action:@selector(submit) forControlEvents:UIControlEventTouchUpInside];
+    [panel addSubview:self.login];
     self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray]; self.spinner.frame = CGRectMake(150,210,20,20); self.spinner.hidesWhenStopped = YES; [panel addSubview:self.spinner];
     self.status = [[UILabel alloc] initWithFrame:CGRectMake(20,242,280,100)]; self.status.numberOfLines = 0; self.status.textAlignment = NSTextAlignmentCenter; self.status.font = [UIFont systemFontOfSize:12]; self.status.textColor = [UIColor colorWithWhite:.85 alpha:1]; self.status.backgroundColor = [UIColor clearColor]; self.status.text = OVKL(@"Данные будут отправлены выбранному инстансу по HTTPS. Пароль на устройстве не сохраняется."); [panel addSubview:self.status];
-    [self.login setBackgroundImage:OVKThemeStretch(@"LoginButtonPressed") forState:UIControlStateHighlighted];
     for (UITextField *field in @[self.username,self.password,self.code]) { field.borderStyle=UITextBorderStyleNone; field.background=OVKThemeStretch(@"LoginField"); UIView *padding=[[UIView alloc] initWithFrame:CGRectMake(0,0,14,1)]; field.leftView=padding; field.leftViewMode=UITextFieldViewModeAlways; field.contentVerticalAlignment=UIControlContentVerticalAlignmentCenter; }
     // Keep the native form and its working authentication, with the old blue login layout.
     for (UIView *element in panel.subviews) { CGRect frame=element.frame; frame.origin.y+=90; element.frame=frame; }
@@ -214,6 +229,7 @@
 @property (strong, nonatomic) OVKPasswordController *loginForm;
 @property (strong, nonatomic) UIView *advancedPanel;
 @property (strong, nonatomic) UIScrollView *loginScroll;
+@property (strong, nonatomic) UIView *loginPanel;
 @property (strong, nonatomic) UILabel *instanceLabel;
 @property (strong, nonatomic) UIButton *advancedButton;
 @property (assign, nonatomic) BOOL advancedShown;
@@ -234,23 +250,23 @@
     [button setTitle:title forState:UIControlStateNormal]; [button setTitleColor:OVKBlue() forState:UIControlStateNormal]; button.titleLabel.font = [UIFont boldSystemFontOfSize:15]; [button addTarget:self action:action forControlEvents:UIControlEventTouchUpInside]; [container addSubview:button]; return button;
 }
 - (void)viewDidLoad {
-    [super viewDidLoad]; self.title = @"Ovk-Mobile"; self.navigationItem.rightBarButtonItem=[UIBarButtonItem alloc];
-        //initWithTitle:OVKL(@"Музыка") style:UIBarButtonItemStylePlain target:self action:@selector(localMusic)];
-    self.navigationItem.leftBarButtonItem=[[UIBarButtonItem alloc] initWithTitle:OVKL(@"Аккаунты") style:UIBarButtonItemStylePlain target:self action:@selector(openSavedAccounts)];
+    [super viewDidLoad];
     OVKConfigureEdges(self);
     UIImageView *backdrop=[[UIImageView alloc] initWithImage:[UIImage imageNamed:@"LoginBackdrop"]]; backdrop.frame=self.view.bounds; backdrop.autoresizingMask=UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight; [self.view addSubview:backdrop];
     UIScrollView *scroll=[[UIScrollView alloc] initWithFrame:self.view.bounds]; self.loginScroll=scroll; scroll.autoresizingMask=UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight; scroll.alwaysBounceVertical=YES; [self.view addSubview:scroll];
-    UIView *panel=[[UIView alloc] initWithFrame:CGRectMake(MAX(0,(self.view.bounds.size.width-320)/2),0,320,420)]; panel.autoresizingMask=UIViewAutoresizingFlexibleLeftMargin|UIViewAutoresizingFlexibleRightMargin; [scroll addSubview:panel]; scroll.contentSize=CGSizeMake(self.view.bounds.size.width,420);
+    UIView *panel=[[UIView alloc] initWithFrame:CGRectMake(0,0,320,434)]; self.loginPanel=panel; [scroll addSubview:panel];
     self.loginForm=[[OVKPasswordController alloc] init]; self.loginForm.embedded=YES;
     __weak OVKLoginController *weakSelf=self;
     self.loginForm.prepareLogin=^BOOL { return [weakSelf prepare]; };
-    self.loginForm.busyChanged=^(BOOL busy) { weakSelf.view.userInteractionEnabled=!busy; weakSelf.navigationItem.rightBarButtonItem.enabled=!busy; weakSelf.navigationItem.leftBarButtonItem.enabled=!busy; };
+    self.loginForm.busyChanged=^(BOOL busy) { weakSelf.view.userInteractionEnabled=!busy; };
     self.loginForm.received=^(NSString *token) { [weakSelf validate:token]; };
     [self addChildViewController:self.loginForm]; self.loginForm.view.frame=CGRectMake(0,0,320,316); self.loginForm.view.backgroundColor=[UIColor clearColor]; [panel addSubview:self.loginForm.view]; [self.loginForm didMoveToParentViewController:self];
-    UIButton *instances=[UIButton buttonWithType:UIButtonTypeCustom]; instances.frame=CGRectMake(20,318,280,32); instances.titleLabel.font=[UIFont boldSystemFontOfSize:13]; [instances setTitle:OVKL(@"Выбрать инстанс") forState:UIControlStateNormal]; [instances setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal]; [instances addTarget:self action:@selector(showInstances) forControlEvents:UIControlEventTouchUpInside]; [panel addSubview:instances];
-    self.instanceLabel=[[UILabel alloc] initWithFrame:CGRectMake(20,348,280,18)]; self.instanceLabel.backgroundColor=[UIColor clearColor]; self.instanceLabel.font=[UIFont systemFontOfSize:11]; self.instanceLabel.textColor=[UIColor colorWithWhite:.85 alpha:1]; self.instanceLabel.textAlignment=NSTextAlignmentCenter; [panel addSubview:self.instanceLabel];
-    self.advancedButton=[UIButton buttonWithType:UIButtonTypeCustom]; self.advancedButton.frame=CGRectMake(20,376,280,30); [self.advancedButton setTitle:OVKL(@"Дополнительно ▾") forState:UIControlStateNormal]; self.advancedButton.titleLabel.font=[UIFont systemFontOfSize:12]; [self.advancedButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal]; [self.advancedButton addTarget:self action:@selector(toggleAdvanced) forControlEvents:UIControlEventTouchUpInside]; [panel addSubview:self.advancedButton];
-    self.advancedPanel=[[UIView alloc] initWithFrame:CGRectMake(0,416,320,526)]; self.advancedPanel.hidden=YES; [panel addSubview:self.advancedPanel];
+    UIButton *instances=[UIButton buttonWithType:UIButtonTypeCustom]; instances.frame=CGRectMake(20,342,280,32); instances.titleLabel.font=[UIFont boldSystemFontOfSize:13]; [instances setTitle:OVKL(@"Выбрать инстанс") forState:UIControlStateNormal]; [instances setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal]; [instances addTarget:self action:@selector(showInstances) forControlEvents:UIControlEventTouchUpInside]; [panel addSubview:instances];
+    self.instanceLabel=[[UILabel alloc] initWithFrame:CGRectMake(20,374,280,18)]; self.instanceLabel.backgroundColor=[UIColor clearColor]; self.instanceLabel.font=[UIFont systemFontOfSize:11]; self.instanceLabel.textColor=[UIColor colorWithWhite:.85 alpha:1]; self.instanceLabel.textAlignment=NSTextAlignmentCenter; [panel addSubview:self.instanceLabel];
+    self.advancedButton=[UIButton buttonWithType:UIButtonTypeCustom]; self.advancedButton.frame=CGRectMake(20,393,140,40); [self.advancedButton setTitle:OVKL(@"Дополнительно ▾") forState:UIControlStateNormal]; self.advancedButton.titleLabel.font=[UIFont systemFontOfSize:12]; [self.advancedButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal]; [self.advancedButton addTarget:self action:@selector(toggleAdvanced) forControlEvents:UIControlEventTouchUpInside]; [panel addSubview:self.advancedButton];
+    UIButton *accounts=[UIButton buttonWithType:UIButtonTypeCustom]; accounts.frame=CGRectMake(160,393,140,40); accounts.titleLabel.font=self.advancedButton.titleLabel.font;
+    [accounts setTitle:OVKL(@"Аккаунты") forState:UIControlStateNormal]; [accounts setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal]; [accounts addTarget:self action:@selector(openSavedAccounts) forControlEvents:UIControlEventTouchUpInside]; [panel addSubview:accounts];
+    self.advancedPanel=[[UIView alloc] initWithFrame:CGRectMake(0,444,320,526)]; self.advancedPanel.hidden=YES; [panel addSubview:self.advancedPanel];
     UIView *advanced=self.advancedPanel;
     self.instancePicker=[[UISegmentedControl alloc] initWithItems:@[@"openvk.org",OVKL(@"Другой")]]; self.instancePicker.frame=CGRectMake(20,0,280,32); self.instancePicker.tintColor=OVKBlue(); [self.instancePicker addTarget:self action:@selector(selectInstance) forControlEvents:UIControlEventValueChanged]; [advanced addSubview:self.instancePicker];
     self.serverField=[[UITextField alloc] initWithFrame:CGRectMake(20,44,280,38)]; self.apiField=[[UITextField alloc] initWithFrame:CGRectMake(20,92,280,38)];
@@ -273,22 +289,49 @@
     self.customAPI = self.instancePicker.selectedSegmentIndex == 1 ? [OVKAPI shared].server : @"";
     self.serverField.enabled = NO; [self selectInstance];
 }
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    [self.navigationController setNavigationBarHidden:YES animated:animated];
+}
+- (void)viewDidLayoutSubviews {
+    [super viewDidLayoutSubviews];
+    [self layoutLoginPanel];
+}
+- (void)layoutLoginPanel {
+    CGSize size=self.loginScroll.bounds.size;
+    // Center the credentials block (y=130 through 282). Short screens scroll from the top.
+    CGFloat top=MAX(0,floor(size.height/2-206));
+    CGFloat height=self.advancedShown ? CGRectGetMaxY(self.advancedPanel.frame)+8 : 434;
+    self.loginPanel.frame=CGRectMake(MAX(0,floor((size.width-320)/2)),top,320,height);
+    self.loginScroll.contentSize=CGSizeMake(MAX(320,size.width),top+height);
+}
 - (void)toggleAdvanced {
     self.advancedShown=!self.advancedShown; self.advancedPanel.hidden=!self.advancedShown;
-    UIView *panel=self.advancedPanel.superview; CGRect frame=panel.frame; frame.size.height=self.advancedShown ? 950 : 420; panel.frame=frame;
-    self.loginScroll.contentSize=CGSizeMake(self.view.bounds.size.width,frame.size.height);
+    if (!self.advancedShown) [self.advancedPanel endEditing:YES];
+    [self layoutLoginPanel];
     [self.advancedButton setTitle:self.advancedShown ? OVKL(@"Дополнительно ▴") : OVKL(@"Дополнительно ▾") forState:UIControlStateNormal];
-    if (self.advancedShown) [self.loginScroll scrollRectToVisible:CGRectMake(0,416,320,180) animated:YES];
+    if (self.advancedShown) [self.loginScroll scrollRectToVisible:[self.advancedPanel convertRect:CGRectMake(0,0,320,180) toView:self.loginScroll] animated:YES];
+    else [self.loginScroll setContentOffset:CGPointZero animated:YES];
 }
 - (void)loginKeyboard:(NSNotification *)note {
     CGRect keyboard=[self.view convertRect:[note.userInfo[UIKeyboardFrameEndUserInfoKey] CGRectValue] fromView:nil]; CGFloat overlap=CGRectGetHeight(CGRectIntersection(self.view.bounds,keyboard)); if (!isfinite(overlap)) overlap=0;
     self.loginScroll.contentInset=UIEdgeInsetsMake(0,0,overlap,0); self.loginScroll.scrollIndicatorInsets=self.loginScroll.contentInset;
-    UIView *field=self.loginForm.username.isFirstResponder ? self.loginForm.username : (self.loginForm.password.isFirstResponder ? self.loginForm.password : nil);
-    if (field) [self.loginScroll scrollRectToVisible:[field convertRect:field.bounds toView:self.loginScroll] animated:YES];
+    if (overlap>0) {
+        for (UITextField *field in @[self.loginForm.username,self.loginForm.password,self.serverField,self.apiField,self.tokenField]) {
+            if (field.isFirstResponder) {
+                [self.loginScroll scrollRectToVisible:[field convertRect:field.bounds toView:self.loginScroll] animated:YES];
+                break;
+            }
+        }
+    } else if (!self.advancedShown) [self.loginScroll setContentOffset:CGPointZero animated:YES];
 }
 - (void)dealloc { [[NSNotificationCenter defaultCenter] removeObserver:self]; }
-- (void)openSavedAccounts { [self.navigationController pushViewController:[[OVKAccountsController alloc] initWithStyle:UITableViewStyleGrouped] animated:YES]; }
-- (void)localMusic { [self.navigationController pushViewController:[[OVKMusicController alloc] init] animated:YES]; }
+- (void)openSavedAccounts {
+    [self.view endEditing:YES];
+    UINavigationController *navigation=self.navigationController;
+    [navigation pushViewController:[[OVKAccountsController alloc] initWithStyle:UITableViewStyleGrouped] animated:YES];
+    [navigation setNavigationBarHidden:NO animated:YES];
+}
 - (void)selectInstance {
     [self.view endEditing:YES];
     if (self.serverField.enabled) { self.customServer = self.serverField.text; self.customAPI = self.apiField.text; }
@@ -355,10 +398,10 @@
 - (void)validate:(NSString *)token {
     if (!token.length) { OVKAlert(OVKL(@"Нет токена"),OVKL(@"Вставьте токен вашего аккаунта OpenVK.")); return; }
     OVKAPI *api = [OVKAPI shared]; api.token = token;
-    self.view.userInteractionEnabled=NO; self.navigationItem.rightBarButtonItem.enabled=NO; self.navigationItem.leftBarButtonItem.enabled=NO;
+    self.view.userInteractionEnabled=NO;
     self.oauthButton.enabled = NO; self.tokenButton.enabled = NO; self.instancePicker.enabled = NO; self.serverField.enabled = NO; self.apiField.enabled = NO; self.checkButton.enabled = NO; self.status.text = OVKL(@"Проверяем аккаунт…");
     [api call:@"users.get" parameters:@{@"fields":@"photo_100,status"} completion:^(id result, NSError *error) {
-        self.view.userInteractionEnabled=YES; self.navigationItem.rightBarButtonItem.enabled=YES; self.navigationItem.leftBarButtonItem.enabled=YES;
+        self.view.userInteractionEnabled=YES;
         self.oauthButton.enabled = YES; self.tokenButton.enabled = YES; self.instancePicker.enabled = YES; self.serverField.enabled = self.instancePicker.selectedSegmentIndex == 1; self.apiField.enabled = YES; self.checkButton.enabled = YES;
         NSDictionary *user = OVKDictionary([OVKArray(result) count] ? result[0] : nil);
         if (error || [user[@"id"] integerValue] <= 0) { api.token = nil; self.status.text = OVKL(@"Вход не выполнен"); OVKAlert(OVKL(@"Ошибка входа"),error.localizedDescription ?: OVKL(@"Сервер не вернул профиль аккаунта")); return; }

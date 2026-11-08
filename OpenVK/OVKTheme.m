@@ -19,7 +19,7 @@ static UIColor *OVKBaseAccent(void) { return OVKAccentPalette(NO)[OVKThemeColor(
 UIColor *OVKThemeAccent(void) { return OVKAccentPalette(OVKDarkTheme())[OVKThemeColor()]; }
 UIColor *OVKThemeBackground(void) { static UIColor *light,*dark; static dispatch_once_t once; dispatch_once(&once, ^{ light=[UIColor colorWithPatternImage:[UIImage imageNamed:@"Linen"]]; dark=[UIColor colorWithRed:.09 green:.105 blue:.125 alpha:1]; }); return OVKDarkTheme() ? dark : light; }
 UIColor *OVKThemeSurface(void) { static UIColor *dark; static dispatch_once_t once; dispatch_once(&once, ^{ dark=[UIColor colorWithRed:.15 green:.17 blue:.20 alpha:1]; }); return OVKDarkTheme() ? dark : [UIColor whiteColor]; }
-UIColor *OVKThemeText(void) { static UIColor *light,*dark; static dispatch_once_t once; dispatch_once(&once, ^{ light=[UIColor colorWithWhite:.12 alpha:1]; dark=[UIColor colorWithWhite:.92 alpha:1]; }); return OVKDarkTheme() ? dark : light; }
+UIColor *OVKThemeText(void) { static UIColor *light; static dispatch_once_t once; dispatch_once(&once, ^{ light=[UIColor colorWithWhite:.12 alpha:1]; }); return OVKDarkTheme() ? [UIColor whiteColor] : light; }
 UIColor *OVKThemeSecondary(void) { static UIColor *dark; static dispatch_once_t once; dispatch_once(&once, ^{ dark=[UIColor colorWithWhite:.66 alpha:1]; }); return OVKDarkTheme() ? dark : [UIColor grayColor]; }
 UIImage *OVKThemeChrome(NSString *name) {
     UIImage *original=[UIImage imageNamed:name]; if (!original || (!OVKDarkTheme() && [OVKThemeColor() isEqualToString:@"blue"])) return original;

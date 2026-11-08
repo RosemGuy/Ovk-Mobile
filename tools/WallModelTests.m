@@ -27,6 +27,24 @@ int main(void) {
   NSDictionary *like=OVKPostActionParameters(owned,@"like",@1);
   Expect([like[@"item_id"] isEqual:@2] && !like[@"post_id"],"Likes use item_id while wall mutations use post_id");
   Expect(!OVKPostActionParameters(@{@"owner_id":@1},@"like",@1),"Invalid post cannot be liked");
+  NSDictionary *first=@{@"id":@1,@"date":@10};
+  NSDictionary *second=@{@"id":@2,@"date":@10};
+  NSDictionary *third=@{@"id":@3,@"date":@10};
+  NSDictionary *fourth=@{@"id":@4,@"date":@11};
+  Expect([OVKMergeChatHistory(@[second,fourth],@[third,second,first],YES) isEqual:@[first,second,third,fourth]],"Older page merges overlap without shifting a missing message out of order");
+  Expect([OVKMergeChatHistory(@[first,second,third],@[fourth,third],NO) isEqual:@[first,second,third,fourth]],"Refreshing the latest page keeps previously loaded older history");
+  Expect([OVKMergeChatHistory(@[first,second,third,fourth],@[fourth,second],NO) isEqual:@[first,second,fourth]],"Fresh page drops an item deleted within its range");
+  Expect(OVKPostAllowsAction(@{@"owner_id":@(-4),@"from_id":@1,@"id":@2},@"edit",@1),"Author can edit their post on another wall");
+  Expect(!OVKPostAllowsAction(@{@"owner_id":@1,@"from_id":@3,@"id":@2},@"edit",@1),"Owning a wall does not make someone else's post editable");
+  Expect(!OVKPostAllowsAction(@{@"owner_id":@1,@"from_id":@1,@"id":@2,@"can_edit":@0},@"edit",@1),"Explicit edit denial is honored");
+  Expect(OVKIsOwnChatMessage(@{@"id":@3,@"from_id":@1},@1),"Own message can be selected");
+  Expect(!OVKIsOwnChatMessage(@{@"id":@3,@"from_id":@2,@"out":@YES},@1),"Sender identity overrides an inconsistent outgoing flag");
+  Expect(!OVKIsOwnChatMessage(@{@"conversation_message_id":@3,@"out":@YES},@1),"Bulk actions need a global message ID");
+  Expect([OVKAttachmentReference(@"photo",@{@"owner_id":@(-4),@"id":@2}) isEqual:@"photo-4_2"],"Attachment retains a signed owner ID");
+  Expect(!OVKAttachmentReference(@"photo",@{@"owner_id":@1,@"id":@"2bad"}),"Malformed attachment IDs are rejected");
+  Expect([OVKConfirmedMessageDeletions(@{@"3":@1,@"4":@0},@[@"3",@"4"]) isEqual:@[@"3"]],"Partial deletion only removes the acknowledged row");
+  Expect([OVKConfirmedMessageDeletions(@[@{@"message_id":@3,@"response":@1}],@[@"3",@"4"]) isEqual:@[@"3"]],"VK list results acknowledge IDs individually");
+  Expect([OVKConfirmedMessageDeletions(@1,@[@"3",@"4"]) isEqual:@[@"3",@"4"]],"Legacy broker acknowledges the whole batch with one");
   puts("PASS: post/comment/message addressing, Unicode, invalid IDs, validation");
  } return 0;
 }

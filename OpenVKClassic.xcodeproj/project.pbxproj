@@ -93,6 +93,7 @@
 		69949E03EB2C262FABC4642F /* TabBar.png in Resources */ = {isa = PBXBuildFile; fileRef = AFB07E530BA24CB6B2F060AF /* TabBar.png */; };
 		6A0B2715BE9744DAA95F7474 /* Navigation.png in Resources */ = {isa = PBXBuildFile; fileRef = E23CDB26443195D7DFC6CD68 /* Navigation.png */; };
 		6B4F22CD2F0A75B98F0FF453 /* MusicShuffle.png in Resources */ = {isa = PBXBuildFile; fileRef = 0D1E9DF72FC5C709478F479B /* MusicShuffle.png */; };
+		6D399C5B7C7FA0D3D1BF8001 /* AssetsLibrary.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 866919A3B98C684659C0465B /* AssetsLibrary.framework */; };
 		6DA48DC723FDCEA0EA20AB2F /* MusicShuffle@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = F441EEF2F4DFE53350B8F629 /* MusicShuffle@2x.png */; };
 		6EE28AD7C640C8BC417BA11B /* PhotoMedia.png in Resources */ = {isa = PBXBuildFile; fileRef = 9091D96DBF9F2813DA307410 /* PhotoMedia.png */; };
 		6EE4530B767031591DCE2978 /* PostButton.png in Resources */ = {isa = PBXBuildFile; fileRef = DE52E0B187D9D7E1DBEF2BC8 /* PostButton.png */; };
@@ -120,6 +121,7 @@
 		814A334EA503A1767AC166B4 /* MessageField@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 80903F9EE71ABC56D94007E1 /* MessageField@2x.png */; };
 		819B9FAFDDABCBA324EB2353 /* MusicShuffleActive@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 0DEED5FAE02D7D7511E0E7D2 /* MusicShuffleActive@2x.png */; };
 		8217C949391C3F5F1729FEA0 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 00311C3AE3295990F6D10D9F /* CoreMedia.framework */; };
+		825D8F3DD4F7DD108F847CC4 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D6004A3838EE85F5E8D96EE8 /* SystemConfiguration.framework */; };
 		832E00BB706C01550A765169 /* CellPanel.png in Resources */ = {isa = PBXBuildFile; fileRef = 4A62661F08F96034A5F694D5 /* CellPanel.png */; };
 		836BE043EFBF9230F5C58E1D /* Messages@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = E3F99FCF3FB00AA3AC40B09D /* Messages@2x.png */; };
 		83BC764B1230F462A7CA6207 /* OVKSetup.m in Sources */ = {isa = PBXBuildFile; fileRef = 68503A7B65778DD308D465A0 /* OVKSetup.m */; };
@@ -225,6 +227,7 @@
 /* Begin PBXFileReference section */
 		00311C3AE3295990F6D10D9F /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		005E996F60B32B3A33901DCA /* Default-Landscape@2x~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-Landscape@2x~ipad.png"; sourceTree = "<group>"; };
+		015F0509D934510CA745D833 /* OVKDebug.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OVKDebug.h; sourceTree = "<group>"; };
 		030CFB2CC7DC2B4D2CFEDE47 /* ProfileCounterPressed@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "ProfileCounterPressed@2x.png"; sourceTree = "<group>"; };
 		03BB125407DED91AFA715817 /* OVKImageRequests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = OVKImageRequests.m; sourceTree = "<group>"; };
 		03C4D6C99BEED6CED0213E9E /* OVKWall.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = OVKWall.m; sourceTree = "<group>"; };
@@ -351,6 +354,7 @@
 		80903F9EE71ABC56D94007E1 /* MessageField@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "MessageField@2x.png"; sourceTree = "<group>"; };
 		82B7977184DFC26B763CF7E3 /* OVKMP4Audio.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OVKMP4Audio.h; sourceTree = "<group>"; };
 		83A20BA582DBB98E085E9B43 /* Friends.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Friends.png; sourceTree = "<group>"; };
+		866919A3B98C684659C0465B /* AssetsLibrary.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AssetsLibrary.framework; path = System/Library/Frameworks/AssetsLibrary.framework; sourceTree = SDKROOT; };
 		8702EC8226D2B7C991A0624E /* Web@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Web@2x.png"; sourceTree = "<group>"; };
 		88F27FDB3E33AD61D852D725 /* MenuRow@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "MenuRow@2x.png"; sourceTree = "<group>"; };
 		8C54035FB5D3207B4674AD28 /* SidebarTexture.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = SidebarTexture.png; sourceTree = "<group>"; };
@@ -430,6 +434,7 @@
 		D46C5E5ACC32E9C3DA2E47DC /* LoginButton.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LoginButton.png; sourceTree = "<group>"; };
 		D48DF7F3AFB07972C414EDF6 /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
 		D5A36E909D1DCBAFFE9D4986 /* Experimental.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Experimental.png; sourceTree = "<group>"; };
+		D6004A3838EE85F5E8D96EE8 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		D6297F9A4701F8E9917AD8F3 /* openvk-logo-x2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "openvk-logo-x2.png"; sourceTree = "<group>"; };
 		D6C9AF4ECEDCBC126EBB0614 /* LoginButtonPressed.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LoginButtonPressed.png; sourceTree = "<group>"; };
 		DA2A5FEC7DE81BBF23C62C31 /* OVKMessagesLayout.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = OVKMessagesLayout.c; sourceTree = "<group>"; };
@@ -480,6 +485,8 @@
 				CA8AD802CDA1B31AA84C0B62 /* MediaPlayer.framework in Frameworks */,
 				682FB9CC7C93626C7715CB60 /* AVFoundation.framework in Frameworks */,
 				003C070F9F7F1032B1234F04 /* AudioToolbox.framework in Frameworks */,
+				825D8F3DD4F7DD108F847CC4 /* SystemConfiguration.framework in Frameworks */,
+				6D399C5B7C7FA0D3D1BF8001 /* AssetsLibrary.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -498,6 +505,99 @@
 			isa = PBXGroup;
 			children = (
 				B35239722D0CB2462A0CB070 /* AboutSecret.mp4 */,
+				8453DDCF30A0B556001E237B /* PNG */,
+				B0E014491758F56DD123F582 /* ChromeCaps.json */,
+				CABFCB5B53F435E2E7A6C4E0 /* Demo.json */,
+				B16FE86B0E8B1BE3534D5E5F /* DemoAudio.wav */,
+				353AA03D2023D82DEE46C3B4 /* DemoClip.mp4 */,
+				C5AD7DB8DB6DC7D66F3500B6 /* ISRG-Root-X1.cer */,
+				3369DAFFDF1BFEB15563947E /* Info.plist */,
+				A16BFD6C2891674A75063B38 /* Languages.json */,
+				94DC7C7F4254875BB62DA6CB /* OVKAPI.h */,
+				015F0509D934510CA745D833 /* OVKDebug.h */,
+				9EAC2F6F554F57D154F3456A /* OVKAPI.m */,
+				17B2595FA06876F98C99FA88 /* OVKAbout.m */,
+				4D3308C95F556EA4B7BEF50E /* OVKAccountsUI.m */,
+				CDDBCEE1F32DD08C8B2975AA /* OVKAppDelegate.m */,
+				4DC15FC0BF7882C7F7F15495 /* OVKAudioDuration.c */,
+				79976AB6229670C945025C99 /* OVKAudioDuration.h */,
+				2A150550CE94C10DAC0AB362 /* OVKFeedLayout.c */,
+				5D2E8FD72093BB44D806D440 /* OVKFeedLayout.h */,
+				F91ED1EF9AB9491D2191E28B /* OVKImageRequests.h */,
+				03BB125407DED91AFA715817 /* OVKImageRequests.m */,
+				C910043999E80A3BD5240AC9 /* OVKInstances.m */,
+				9033EF4C7E0580E572E710DF /* OVKLanguage.h */,
+				0828B6027704EFA1B2E48419 /* OVKLanguage.m */,
+				20A225FE88B7A0BF75CF7D32 /* OVKLocalAudio.h */,
+				7EF7079B5CE6746D75795E22 /* OVKLocalAudio.m */,
+				43B64DC55DF726BC54F6CD74 /* OVKLogin.m */,
+				FEE9C86CED159CB1B453278B /* OVKMP4Audio.c */,
+				82B7977184DFC26B763CF7E3 /* OVKMP4Audio.h */,
+				98BCBC15FBA73021AC2B92B4 /* OVKMedia.h */,
+				FCD885AA1426996A55F5F8FB /* OVKMedia.m */,
+				C3C42730EAE764218490CCC4 /* OVKMediaFormat.c */,
+				FFF25F12492485517D08E481 /* OVKMediaFormat.h */,
+				B2246C317CC2C6D68CDD2E77 /* OVKMediaModel.h */,
+				16E80D826B8EA1C4B47097F5 /* OVKMediaModel.m */,
+				4F2D877BCBD456B2EFEACB4E /* OVKMessagesController.m */,
+				DA2A5FEC7DE81BBF23C62C31 /* OVKMessagesLayout.c */,
+				A41A324E707805EEB238B25F /* OVKMessagesLayout.h */,
+				51684FFE716714A1EE04E12B /* OVKMusic.h */,
+				643630530D3794FD060085BC /* OVKMusic.m */,
+				1660ACE368965F9FC8AC555F /* OVKMusicFiles.h */,
+				BF8109831BC0425C4C06BF0B /* OVKMusicFiles.m */,
+				6650D6186603DFCD2555CBFC /* OVKMusicLayout.c */,
+				4C503559DAFC16CDDD3A20FE /* OVKMusicLayout.h */,
+				6D6EEA3507D7AFFB8D0F129D /* OVKPerformance.h */,
+				FC45504F32BC235D8CA67B89 /* OVKPerformance.m */,
+				2367E0E7BCD3812BBD8E0F84 /* OVKPlaybackSession.h */,
+				E123BAE8F701966F33030EF5 /* OVKPlaybackSession.m */,
+				0EBB084905804E887EE9F805 /* OVKRootController.m */,
+				BEE19E7953F1047587FFA6F8 /* OVKSetup.h */,
+				68503A7B65778DD308D465A0 /* OVKSetup.m */,
+				13CA360FF759470FBAB48ED5 /* OVKSocial.h */,
+				994994FCBD4FADFB896D96DB /* OVKSocial.m */,
+				610FE294F28581322A213AD4 /* OVKSocialModel.h */,
+				BCCA93CCC99CEB22E1CD2964 /* OVKSocialModel.m */,
+				744E07FB1268DA219F8D8B93 /* OVKTheme.h */,
+				94A99A82EB9CA74734CE9E45 /* OVKTheme.m */,
+				A2D60701F84717752BCF43BB /* OVKTrust.h */,
+				295FF1AD406F7895CCF18454 /* OVKTrust.m */,
+				FFBB3A05695D0DC21F58ED89 /* OVKUI.h */,
+				0A613DD674C34010CFA41141 /* OVKUI.m */,
+				48D412768BDAE5E8CA52D34E /* OVKVideoSound.h */,
+				3CBE66AF8FC64211ADF2F5A3 /* OVKVideoSound.m */,
+				08E68B3D3AC4363645677508 /* OVKWall.h */,
+				03C4D6C99BEED6CED0213E9E /* OVKWall.m */,
+				8E65A3BB3183A49E1A3CC38C /* OVKWallModel.h */,
+				6C627493D3F886D33C2283B9 /* OVKWallModel.m */,
+				C94D99B7BC48AF8C68BC6986 /* main.m */,
+			);
+			path = OpenVK;
+			sourceTree = "<group>";
+		};
+		6B24C37FA8C0EB675FCB35AE /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				B4B5BABF2DDB455E44208CA4 /* UIKit.framework */,
+				FDDE6AFA94415E200D1CC905 /* Foundation.framework */,
+				1D4164608055FD1355839987 /* CoreGraphics.framework */,
+				F25CE1B8A399BD8621A57427 /* Security.framework */,
+				8E560CE6AEEFF5F21DF80F9E /* QuartzCore.framework */,
+				9CFA0EE34D7252BA885E40E3 /* ImageIO.framework */,
+				00311C3AE3295990F6D10D9F /* CoreMedia.framework */,
+				6876F06552FEB5A6DC2D5B09 /* MediaPlayer.framework */,
+				796881AE07B1C713102830A9 /* AVFoundation.framework */,
+				694CCCC2ACA07D63D493E440 /* AudioToolbox.framework */,
+				D6004A3838EE85F5E8D96EE8 /* SystemConfiguration.framework */,
+				866919A3B98C684659C0465B /* AssetsLibrary.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		8453DDCF30A0B556001E237B /* PNG */ = {
+			isa = PBXGroup;
+			children = (
 				D1C662428C35057E37956579 /* Answers.png */,
 				30A447E061908B738292488F /* Answers@2x.png */,
 				CADED7D559D935BC1B9FF323 /* AudioMedia.png */,
@@ -517,7 +617,6 @@
 				44E6733748B393E2780696CA /* BubbleOutgoingSelected@2x.png */,
 				4A62661F08F96034A5F694D5 /* CellPanel.png */,
 				58DEA45DE097AA0895642C5E /* CellPanel@2x.png */,
-				B0E014491758F56DD123F582 /* ChromeCaps.json */,
 				6A6CEDC64B0C95BB636D16A0 /* ComposeGlyph.png */,
 				561454A29B7308AD15676CBE /* ComposeGlyph@2x.png */,
 				9904CB36D1F3F8DCA0EBE9C3 /* Default-568h@2x.png */,
@@ -527,11 +626,8 @@
 				22D195D23E4BFE2975210297 /* Default-Portrait~ipad.png */,
 				9377A2C2446BC54495A65466 /* Default.png */,
 				040C84243641B1544F776B4A /* Default@2x.png */,
-				CABFCB5B53F435E2E7A6C4E0 /* Demo.json */,
 				508F255D543FC2FBEA4E73D2 /* DemoAlex.png */,
 				7CD9725127C1622FF2BD790E /* DemoAnna.png */,
-				B16FE86B0E8B1BE3534D5E5F /* DemoAudio.wav */,
-				353AA03D2023D82DEE46C3B4 /* DemoClip.mp4 */,
 				4C87E223C7C5978F2DBA6D93 /* DemoClub.png */,
 				B0E767B1E55632A27DB45A69 /* DemoPhoto.png */,
 				D5A36E909D1DCBAFFE9D4986 /* Experimental.png */,
@@ -546,7 +642,6 @@
 				B663F81CC7F31B53E0E189E2 /* GroupPlaceholder@2x.png */,
 				74FC4EC19CD2B2CACEDB5FE3 /* Groups.png */,
 				E5A18E556A3BA2CF993FB986 /* Groups@2x.png */,
-				C5AD7DB8DB6DC7D66F3500B6 /* ISRG-Root-X1.cer */,
 				C69F90EB6CCD5C3F532C8A18 /* Icon-60@2x.png */,
 				1B01589C68B7A865260A3E8A /* Icon-72.png */,
 				E6BBFB6BDCCEE23EE95A99AA /* Icon-72@2x.png */,
@@ -554,8 +649,6 @@
 				6F0DD72AB3E2C76D5B05163E /* Icon-76@2x.png */,
 				D48DF7F3AFB07972C414EDF6 /* Icon.png */,
 				98D0FF2F8EF69C698D954A18 /* Icon@2x.png */,
-				3369DAFFDF1BFEB15563947E /* Info.plist */,
-				A16BFD6C2891674A75063B38 /* Languages.json */,
 				2146141550B841C35342BD04 /* Linen.png */,
 				DD9F90DD6DA6D0B3EFF308FD /* Linen@2x.png */,
 				C09A483AAC594FEF8F68FFBE /* LoginBackdrop.png */,
@@ -616,63 +709,6 @@
 				61C49532AF4F0F4130AB2187 /* News@2x.png */,
 				563D8F816319FAA53194C12C /* NextTrack.png */,
 				176950D527E7CD11735B1953 /* NextTrack@2x.png */,
-				94DC7C7F4254875BB62DA6CB /* OVKAPI.h */,
-				9EAC2F6F554F57D154F3456A /* OVKAPI.m */,
-				17B2595FA06876F98C99FA88 /* OVKAbout.m */,
-				4D3308C95F556EA4B7BEF50E /* OVKAccountsUI.m */,
-				CDDBCEE1F32DD08C8B2975AA /* OVKAppDelegate.m */,
-				4DC15FC0BF7882C7F7F15495 /* OVKAudioDuration.c */,
-				79976AB6229670C945025C99 /* OVKAudioDuration.h */,
-				2A150550CE94C10DAC0AB362 /* OVKFeedLayout.c */,
-				5D2E8FD72093BB44D806D440 /* OVKFeedLayout.h */,
-				F91ED1EF9AB9491D2191E28B /* OVKImageRequests.h */,
-				03BB125407DED91AFA715817 /* OVKImageRequests.m */,
-				C910043999E80A3BD5240AC9 /* OVKInstances.m */,
-				9033EF4C7E0580E572E710DF /* OVKLanguage.h */,
-				0828B6027704EFA1B2E48419 /* OVKLanguage.m */,
-				20A225FE88B7A0BF75CF7D32 /* OVKLocalAudio.h */,
-				7EF7079B5CE6746D75795E22 /* OVKLocalAudio.m */,
-				43B64DC55DF726BC54F6CD74 /* OVKLogin.m */,
-				FEE9C86CED159CB1B453278B /* OVKMP4Audio.c */,
-				82B7977184DFC26B763CF7E3 /* OVKMP4Audio.h */,
-				98BCBC15FBA73021AC2B92B4 /* OVKMedia.h */,
-				FCD885AA1426996A55F5F8FB /* OVKMedia.m */,
-				C3C42730EAE764218490CCC4 /* OVKMediaFormat.c */,
-				FFF25F12492485517D08E481 /* OVKMediaFormat.h */,
-				B2246C317CC2C6D68CDD2E77 /* OVKMediaModel.h */,
-				16E80D826B8EA1C4B47097F5 /* OVKMediaModel.m */,
-				4F2D877BCBD456B2EFEACB4E /* OVKMessagesController.m */,
-				DA2A5FEC7DE81BBF23C62C31 /* OVKMessagesLayout.c */,
-				A41A324E707805EEB238B25F /* OVKMessagesLayout.h */,
-				51684FFE716714A1EE04E12B /* OVKMusic.h */,
-				643630530D3794FD060085BC /* OVKMusic.m */,
-				1660ACE368965F9FC8AC555F /* OVKMusicFiles.h */,
-				BF8109831BC0425C4C06BF0B /* OVKMusicFiles.m */,
-				6650D6186603DFCD2555CBFC /* OVKMusicLayout.c */,
-				4C503559DAFC16CDDD3A20FE /* OVKMusicLayout.h */,
-				6D6EEA3507D7AFFB8D0F129D /* OVKPerformance.h */,
-				FC45504F32BC235D8CA67B89 /* OVKPerformance.m */,
-				2367E0E7BCD3812BBD8E0F84 /* OVKPlaybackSession.h */,
-				E123BAE8F701966F33030EF5 /* OVKPlaybackSession.m */,
-				0EBB084905804E887EE9F805 /* OVKRootController.m */,
-				BEE19E7953F1047587FFA6F8 /* OVKSetup.h */,
-				68503A7B65778DD308D465A0 /* OVKSetup.m */,
-				13CA360FF759470FBAB48ED5 /* OVKSocial.h */,
-				994994FCBD4FADFB896D96DB /* OVKSocial.m */,
-				610FE294F28581322A213AD4 /* OVKSocialModel.h */,
-				BCCA93CCC99CEB22E1CD2964 /* OVKSocialModel.m */,
-				744E07FB1268DA219F8D8B93 /* OVKTheme.h */,
-				94A99A82EB9CA74734CE9E45 /* OVKTheme.m */,
-				A2D60701F84717752BCF43BB /* OVKTrust.h */,
-				295FF1AD406F7895CCF18454 /* OVKTrust.m */,
-				FFBB3A05695D0DC21F58ED89 /* OVKUI.h */,
-				0A613DD674C34010CFA41141 /* OVKUI.m */,
-				48D412768BDAE5E8CA52D34E /* OVKVideoSound.h */,
-				3CBE66AF8FC64211ADF2F5A3 /* OVKVideoSound.m */,
-				08E68B3D3AC4363645677508 /* OVKWall.h */,
-				03C4D6C99BEED6CED0213E9E /* OVKWall.m */,
-				8E65A3BB3183A49E1A3CC38C /* OVKWallModel.h */,
-				6C627493D3F886D33C2283B9 /* OVKWallModel.m */,
 				CAB28720694EB7F0F3C48A68 /* PauseTrack.png */,
 				5AD8D7E7A1B85C9B6D2F2912 /* PauseTrack@2x.png */,
 				9091D96DBF9F2813DA307410 /* PhotoMedia.png */,
@@ -721,38 +757,20 @@
 				C2D9DF79493215AA08270B8D /* VideoMedia@2x.png */,
 				EF9F684F1323965821D3B478 /* Web.png */,
 				8702EC8226D2B7C991A0624E /* Web@2x.png */,
-				C94D99B7BC48AF8C68BC6986 /* main.m */,
 				B1494BC887E9E04CC63D1694 /* openvk-logo-x1.png */,
 				D6297F9A4701F8E9917AD8F3 /* openvk-logo-x2.png */,
 				654825A9AE080DA82A6E94FD /* openvk-logo.png */,
 				065EC47AB41D54A5E189835B /* siluette.png */,
 			);
-			path = OpenVK;
-			sourceTree = "<group>";
-		};
-		6B24C37FA8C0EB675FCB35AE /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				B4B5BABF2DDB455E44208CA4 /* UIKit.framework */,
-				FDDE6AFA94415E200D1CC905 /* Foundation.framework */,
-				1D4164608055FD1355839987 /* CoreGraphics.framework */,
-				F25CE1B8A399BD8621A57427 /* Security.framework */,
-				8E560CE6AEEFF5F21DF80F9E /* QuartzCore.framework */,
-				9CFA0EE34D7252BA885E40E3 /* ImageIO.framework */,
-				00311C3AE3295990F6D10D9F /* CoreMedia.framework */,
-				6876F06552FEB5A6DC2D5B09 /* MediaPlayer.framework */,
-				796881AE07B1C713102830A9 /* AVFoundation.framework */,
-				694CCCC2ACA07D63D493E440 /* AudioToolbox.framework */,
-			);
-			name = Frameworks;
+			name = PNG;
 			sourceTree = "<group>";
 		};
 		B28B7AF69320201D1CF206EB = {
 			isa = PBXGroup;
 			children = (
 				3A2A88DEEFF3D1D23E496597 /* OpenVK */,
-				6B24C37FA8C0EB675FCB35AE /* Frameworks */,
 				1EE63A94BAD0DF0FCB0E7B8C /* Products */,
+				6B24C37FA8C0EB675FCB35AE /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1047,7 +1065,10 @@
 		639A7CA24D39909E713B47F7 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD)";
+				ARCHS = (
+					"$(ARCHS_STANDARD)",
+					armv6,
+				);
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -1066,7 +1087,10 @@
 		7082CC0B6FC1282FCEABD07A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD)";
+				ARCHS = (
+					"$(ARCHS_STANDARD)",
+					armv6,
+				);
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -1078,7 +1102,7 @@
 				);
 				INFOPLIST_FILE = OpenVK/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = org.openvk.classic.ios6;
 				PRODUCT_NAME = OpenVKClassic;
 				SDKROOT = iphoneos;

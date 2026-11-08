@@ -57,10 +57,8 @@ static NSString *SocialName(NSDictionary *person) {
     NSString *method=@"notifications.get";
     if ([self isGroups]) { method=self.query.length ? @"groups.search" : @"groups.get"; parameters[@"extended"]=@1; parameters[@"fields"]=@"photo_100,members_count,is_member,description,verified"; if (self.query.length) parameters[@"q"]=self.query; else parameters[@"user_id"]=[OVKAPI shared].userID ?: @0; }
     __weak OVKSocialController *weakSelf=self;
-    [[OVKAPI shared] call:method parameters:parameters completion:^(id result,NSError *error) {
+    void (^show)(id)=^(id result) {
         OVKSocialController *page=weakSelf; if (!page || generation!=page.generation) return;
-        page.loading=NO; page.moreButton.enabled=YES; [page.refresh endRefreshing];
-        if (error) { page.notice.text=error.localizedDescription; [page.moreButton setTitle:OVKL(@"Повторить") forState:UIControlStateNormal]; return; }
         if (![result isKindOfClass:[NSArray class]] && ![OVKDictionary(result)[@"items"] isKindOfClass:[NSArray class]]) { page.notice.text=OVKL(@"Формат ответа этого сервера не поддерживается"); [page.moreButton setTitle:OVKL(@"Повторить") forState:UIControlStateNormal]; return; }
         NSArray *incoming=OVKSocialItems(result); NSDictionary *response=OVKDictionary(result);
         if (!append) page.lastViewed=[OVKString(response[@"last_viewed"]) doubleValue];
@@ -69,8 +67,16 @@ static NSString *SocialName(NSDictionary *person) {
         for (id value in OVKArray(response[@"profiles"])) { NSDictionary *person=OVKDictionary(value); if (person[@"id"]) page.people[OVKString(person[@"id"])]=person; }
         for (id value in OVKArray(response[@"groups"])) { NSDictionary *group=OVKDictionary(value); if (group[@"id"]) page.people[OVKString(@(-[OVKString(group[@"id"]) longLongValue]))]=group; }
         page.more=![OVKAPI shared].demo && incoming.count>=count && (!response[@"count"] || page.offset<[OVKString(response[@"count"]) integerValue]);
-        page.notice.text=page.items.count ? OVKL(@"Потяните вниз для обновления") : OVKL([page isGroups] ? @"Группы не найдены" : @"Новых уведомлений нет");
+        page.notice.text=page.items.count ? @"" : OVKL([page isGroups] ? @"Группы не найдены" : @"Новых уведомлений нет");
         [page.moreButton setTitle:page.more ? OVKL(@"Показать ещё") : OVKL(@"Обновить") forState:UIControlStateNormal]; [page.table reloadData];
+    };
+    [[OVKAPI shared] call:method parameters:parameters cached:^(id result) {
+        if (!append && !weakSelf.items.count) show(result);
+    } completion:^(id result,NSError *error) {
+        OVKSocialController *page=weakSelf; if (!page || generation!=page.generation) return;
+        page.loading=NO; page.moreButton.enabled=YES; [page.refresh endRefreshing];
+        if (error) { page.notice.text=page.items.count ? @"" : error.localizedDescription; [page.moreButton setTitle:OVKL(@"Повторить") forState:UIControlStateNormal]; return; }
+        show(result);
     }];
 }
 - (void)searchBar:(UISearchBar *)searchBar textDidChange:(NSString *)text { self.query=[text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]]; ++self.generation; self.loading=NO; [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(reload) object:nil]; [self performSelector:@selector(reload) withObject:nil afterDelay:.4]; }
@@ -131,12 +137,20 @@ static NSString *SocialName(NSDictionary *person) {
 - (void)viewDidLayoutSubviews { [super viewDidLayoutSubviews]; if (fabs(self.headerWidth-[self wallContentWidth])>.5) [self updateGroupHeader]; }
 - (void)loadGroup {
     self.navigationItem.rightBarButtonItem.enabled=NO; NSUInteger generation=++self.groupGeneration; __weak OVKGroupController *weakSelf=self;
-    [[OVKAPI shared] call:@"groups.getById" parameters:@{@"group_id":self.groupID,@"fields":@"description,members_count,is_member,can_post,photo_100,photo_200,verified"} completion:^(id result,NSError *error) {
+    void (^show)(id)=^(id result) {
+        OVKGroupController *page=weakSelf; if (!page || generation!=page.groupGeneration) return;
+        NSArray *groups=[result isKindOfClass:[NSArray class]] ? OVKSocialItems(result) : OVKSocialItems(OVKDictionary(result)[@"groups"] ?: result);
+        if (groups.count) { page.group=groups[0]; page.title=SocialName(page.group); [page updateGroupHeader]; }
+    };
+    [[OVKAPI shared] call:@"groups.getById" parameters:@{@"group_id":self.groupID,@"fields":@"description,members_count,is_member,can_post,photo_100,photo_200,verified"} cached:^(id result) {
+        if (!weakSelf.group.count) show(result);
+    } completion:^(id result,NSError *error) {
         OVKGroupController *page=weakSelf; if (!page || generation!=page.groupGeneration) return;
         page.navigationItem.rightBarButtonItem.enabled=YES;
-        NSArray *groups=[result isKindOfClass:[NSArray class]] ? OVKSocialItems(result) : OVKSocialItems(OVKDictionary(result)[@"groups"] ?: result);
-        if (error || !groups.count) { page.changingMembership=NO; [page updateGroupHeader]; if (error) OVKAlert(OVKL(@"Группа"),error.localizedDescription); return; }
-        page.group=groups[0]; page.changingMembership=NO; page.title=SocialName(page.group); [page updateGroupHeader];
+        page.changingMembership=NO;
+        if (!error) show(result);
+        else if (!page.group.count) OVKAlert(OVKL(@"Группа"),error.localizedDescription);
+        [page updateGroupHeader];
     }];
 }
 - (void)updateGroupHeader {

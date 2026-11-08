@@ -2,10 +2,12 @@
 #import "OVKLanguage.h"
 #import "OVKUI.h"
 #import "OVKAPI.h"
+#import "OVKDebug.h"
 #import "OVKMusic.h"
 #import "OVKMedia.h"
 @implementation OVKAppDelegate
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)options {
+    OVKDebugLog(@"[App] launching on iOS %@", [[UIDevice currentDevice] systemVersion]);
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(showLogin) name:@"OVKLogout" object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(showClient) name:@"OVKAccountChanged" object:nil];
@@ -13,17 +15,23 @@
     [self.window makeKeyAndVisible]; [[UIApplication sharedApplication] beginReceivingRemoteControlEvents]; [self becomeFirstResponder]; return YES;
 }
 - (void)showLogin {
+    OVKDebugLog(@"[App] showing login");
     UINavigationController *nav = [[OVKNavigationController alloc] initWithRootViewController:[[OVKLoginController alloc] init]]; OVKStyleNavigation(nav);
     [self.window.rootViewController dismissViewControllerAnimated:NO completion:nil]; self.window.rootViewController = nav;
 }
 - (void)showClient {
+    OVKDebugLog(@"[App] showing client (demo=%d)", [OVKAPI shared].demo);
     if (![OVKAPI shared].demo && ![[NSUserDefaults standardUserDefaults] boolForKey:@"OVKClientSetupCompleted"]) {
         OVKSetupController *setup=[[OVKSetupController alloc] init]; __weak OVKAppDelegate *weakSelf=self;
         setup.completed=^{ weakSelf.window.rootViewController=[[OVKRootController alloc] init]; };
         UINavigationController *navigation=[[OVKNavigationController alloc] initWithRootViewController:setup]; OVKStyleNavigation(navigation); self.window.rootViewController=navigation;
     } else self.window.rootViewController=[[OVKRootController alloc] init];
 }
-- (void)applicationDidReceiveMemoryWarning:(UIApplication *)application { [OVKMedia clearImageCache]; OVKClearThemeCaches(); }
+- (void)applicationDidReceiveMemoryWarning:(UIApplication *)application {
+    OVKDebugLog(@"[App] memory warning: clearing image and theme caches");
+    [OVKMedia clearImageCache];
+    OVKClearThemeCaches();
+}
 - (void)applicationDidBecomeActive:(UIApplication *)application { OVKRestoreDefaultApplicationIcon(); }
 // The app-level mask must allow media landscape on phones. Individual
 // navigation controllers keep ordinary phone screens portrait-only.

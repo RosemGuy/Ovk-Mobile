@@ -179,12 +179,11 @@ static UIImage *OVKSendPlane(void) {
 @property (assign, nonatomic) BOOL unread;
 @property (assign, nonatomic) BOOL chatStyle;
 @property (assign, nonatomic) BOOL outgoing;
-@property (strong, nonatomic) UIView *bubble;
+@property (strong, nonatomic) UIImageView *bubble;
 @property (strong, nonatomic) UILabel *quotedMessage;
 @property (strong, nonatomic) UIButton *postMenuButton;
 @property (strong, nonatomic) OVKInlineAudioView *inlineAudio;
 @property (copy, nonatomic) void (^postMenuTapped)(void);
-@property (strong, nonatomic) UIImage *bubbleArtwork;
 @property (copy, nonatomic) NSString *bubbleArtworkKey;
 @property (strong, nonatomic) CAGradientLayer *photoGloss;
 @property (assign, nonatomic) CGFloat chatPhotoWidth;
@@ -199,7 +198,7 @@ static UIImage *OVKSendPlane(void) {
     self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
     if (self) {
         self.avatar = [[OVKRemoteImageView alloc] init]; if ([self.avatar respondsToSelector:@selector(setMaxPixelSize:)]) self.avatar.maxPixelSize=OVKLowMemoryDevice() ? 96 : 128; self.avatar.contentMode = UIViewContentModeScaleAspectFill; self.avatar.clipsToBounds = YES; self.avatar.userInteractionEnabled = YES; [self.avatar addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapAvatar)]]; self.avatar.layer.borderWidth = 1; self.avatar.layer.borderColor = [UIColor colorWithWhite:0 alpha:.2].CGColor;
-        self.bubble = [[UIView alloc] init]; self.bubble.userInteractionEnabled=NO; [self.contentView addSubview:self.bubble];
+        self.bubble = [[UIImageView alloc] init]; self.bubble.userInteractionEnabled=NO; [self.contentView addSubview:self.bubble];
         self.quotedMessage=[[UILabel alloc] init]; self.quotedMessage.numberOfLines=2;
         self.quotedMessage.font=[UIFont systemFontOfSize:11];
         [self.contentView addSubview:self.quotedMessage];
@@ -295,13 +294,8 @@ static UIImage *OVKSendPlane(void) {
         NSString *key=[NSString stringWithFormat:@"%@/%@/%d",art,OVKThemeColor(),OVKDarkTheme()];
         if (![self.bubbleArtworkKey isEqualToString:key]) {
             self.bubbleArtworkKey=key;
-            self.bubbleArtwork=OVKThemeChrome(art);
-            UIImage *image=self.bubbleArtwork;
-            if (image && image.size.width>36 && image.size.height>30) {
-                self.bubble.layer.contents=(__bridge id)image.CGImage;
-                self.bubble.layer.contentsScale=image.scale;
-                self.bubble.layer.contentsCenter=CGRectMake(18/image.size.width,15/image.size.height,1-36/image.size.width,1-30/image.size.height);
-            }
+            // Stretch the middle of the sprite while preserving its corners and tail.
+            self.bubble.image=[OVKThemeChrome(art) resizableImageWithCapInsets:UIEdgeInsetsMake(15,18,15,18) resizingMode:UIImageResizingModeStretch];
         }
         self.bubble.frame=CGRectMake(x,5,bubbleWidth,height-10);
         self.avatar.frame = CGRectMake(8,MAX(6,height-38),30,30);

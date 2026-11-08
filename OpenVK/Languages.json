@@ -327,6 +327,7 @@
   "Крупный": "Large",
   "Обычный": "Normal",
   "Очистить кэш изображений": "Clear image cache",
+  "При следующем просмотре изображения загрузятся заново.": "Images will download again the next time you view them.",
   "Освободить память от загруженных изображений": "Release cached images from memory",
   "Кэш очищен": "Cache cleared",
   "Кэш изображений в памяти очищен. Открытые фотографии останутся на экране.": "The in-memory image cache has been cleared. Photos currently on screen remain visible.",

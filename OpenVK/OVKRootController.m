@@ -69,7 +69,7 @@ static UIImage *OVKMenuGlyph(void) {
         cell.textLabel.text=@[@"Ovk-Mobile alpha",OVKL(@"Оформление"),OVKL(@"Настройка клиента"),OVKL(@"Язык"),OVKL(@"Очистить кэш изображений"),OVKL(@"Порядок меню"),OVKL(@"Кэш музыки")][path.row];
         cell.detailTextLabel.text=@[OVKL(@"Версия 1.0"),OVKL(@"Тема, цвет и размер текста"),OVKL(@"Язык, тема и цвет"),OVKLanguageIsEnglish() ? @"English" : @"Русский",OVKL(@"Освободить память от загруженных изображений"),OVKL(@"Перетащите пункты в нужном порядке"),OVKL(@"Треки для прослушивания офлайн")][path.row];
         if (path.row==0 || path.row==1 || path.row==3 || path.row==5 || path.row==6) cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator;
-        if (path.row==2) { cell.imageView.image=[UIImage imageNamed:@"Settings"]; cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator; }
+        if (path.row==2) cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator;
     }
     else { cell.textLabel.text = OVKL(@"Выйти из аккаунта"); cell.textLabel.textColor = [UIColor colorWithRed:.65 green:.18 blue:.18 alpha:1]; }
     OVKThemeCell(cell); return cell;
@@ -81,13 +81,21 @@ static UIImage *OVKMenuGlyph(void) {
     if (path.section==1 && path.row==5) [self.navigationController pushViewController:[[OVKMenuOrderController alloc] initWithStyle:UITableViewStyleGrouped] animated:YES];
     if (path.section==1 && path.row==6) [self.navigationController pushViewController:[[OVKMusicCacheController alloc] initWithStyle:UITableViewStyleGrouped] animated:YES];
     if (path.section==1 && path.row==1) [self.navigationController pushViewController:[[OVKAppearanceController alloc] init] animated:YES];
-    if (path.section==1 && path.row==4) { [OVKMedia clearStoredImageCache]; OVKAlert(OVKL(@"Кэш очищен"),OVKL(@"Сохранённые копии изображений удалены.")); }
+    if (path.section==1 && path.row==4) {
+        UIAlertView *confirmation=[[UIAlertView alloc] initWithTitle:OVKL(@"Очистить кэш изображений") message:OVKL(@"При следующем просмотре изображения загрузятся заново.") delegate:self cancelButtonTitle:OVKL(@"Отмена") otherButtonTitles:OVKL(@"Удалить"),nil];
+        confirmation.tag=401;
+        [confirmation show];
+    }
     if (path.section==1 && path.row==3) [self.navigationController pushViewController:[[OVKLanguageController alloc] init] animated:YES];
     if (path.section==1 && path.row==2) [self.navigationController pushViewController:[[OVKSetupController alloc] init] animated:YES];
     if (path.section == 2) [[[UIAlertView alloc] initWithTitle:OVKL(@"Выйти?") message:OVKL(@"Сохранённый токен будет удалён с устройства.") delegate:self cancelButtonTitle:OVKL(@"Отмена") otherButtonTitles:OVKL(@"Выйти"),nil] show];
 }
 - (void)viewWillAppear:(BOOL)animated { [super viewWillAppear:animated]; self.title=OVKL(@"Настройки"); OVKThemeTable(self.tableView); [self.tableView reloadData]; }
-- (void)alertView:(UIAlertView *)alert clickedButtonAtIndex:(NSInteger)index { if (index == 1) [[OVKAPI shared] logout]; }
+- (void)alertView:(UIAlertView *)alert clickedButtonAtIndex:(NSInteger)index {
+    if (index!=alert.firstOtherButtonIndex) return;
+    if (alert.tag==401) [OVKMedia clearStoredImageCache];
+    else [[OVKAPI shared] logout];
+}
 @end
 @interface OVKRootController () <UITableViewDataSource,UITableViewDelegate,UIGestureRecognizerDelegate>
 @property (strong, nonatomic) NSArray *menuModesCache;
@@ -108,9 +116,15 @@ static UIImage *OVKMenuGlyph(void) {
 @property (strong, nonatomic) OVKRemoteImageView *profileImage;
 @property (copy, nonatomic) NSString *selected;
 @property (assign, nonatomic) BOOL opened;
+@property (strong, nonatomic) NSNumber *padCompactOverride;
+@property (assign, nonatomic) BOOL miniIsVideo;
 @end
 @implementation OVKRootController
-- (CGFloat)menuWidth { return UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad ? ([self.selected isEqualToString:@"dialogs"] && self.miniPlayer.hidden ? 64 : 240) : MIN(280,self.view.bounds.size.width-55); }
+- (BOOL)compactSidebar {
+    if (UI_USER_INTERFACE_IDIOM()!=UIUserInterfaceIdiomPad) return NO;
+    return self.padCompactOverride ? self.padCompactOverride.boolValue : [self.selected isEqualToString:@"dialogs"];
+}
+- (CGFloat)menuWidth { return UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad ? ([self compactSidebar] ? 64 : 240) : MIN(280,self.view.bounds.size.width-55); }
 - (void)viewDidLoad {
     [super viewDidLoad]; self.sections = [NSMutableDictionary dictionary]; self.view.backgroundColor = [UIColor colorWithPatternImage:[UIImage imageNamed:@"SidebarTexture"]]; self.view.clipsToBounds = YES;
     OVKConfigureEdges(self);
@@ -126,7 +140,12 @@ static UIImage *OVKMenuGlyph(void) {
     self.profileHeader = header;
     [self.sidebar addSubview:header];
     [self buildMiniPlayer];
-    UISwipeGestureRecognizer *left = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(closeMenu)]; left.direction = UISwipeGestureRecognizerDirectionLeft; [self.sidebar addGestureRecognizer:left];
+    UISwipeGestureRecognizer *left = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(sidebarSwiped:)]; left.direction = UISwipeGestureRecognizerDirectionLeft; [self.sidebar addGestureRecognizer:left];
+    if (UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad) {
+        UISwipeGestureRecognizer *right=[[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(sidebarSwiped:)];
+        right.direction=UISwipeGestureRecognizerDirectionRight;
+        [self.sidebar addGestureRecognizer:right];
+    }
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(themeChanged:) name:@"OVKThemeChanged" object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(experimentalChanged:) name:@"OVKExperimentalChanged" object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(languageChanged:) name:@"OVKLanguageChanged" object:nil];
@@ -138,10 +157,11 @@ static UIImage *OVKMenuGlyph(void) {
     void (^showProfile)(id)=^(id result) {
         if (demo != [OVKAPI shared].demo || (!demo && ![session isEqualToString:[OVKAPI shared].token])) return;
         if (OVKArray(result).count) { NSDictionary *user = OVKDictionary(result[0]); self.nameLabel.text = [NSString stringWithFormat:@"%@ %@",OVKString(user[@"first_name"]),OVKString(user[@"last_name"])];
-            [self.profileImage load:OVKString(user[@"photo_100"])]; self.statusLabel.text=OVKString(user[@"status"]); }
+            NSString *avatarURL=OVKString(user[@"photo_200"]);
+            [self.profileImage load:avatarURL.length ? avatarURL : OVKString(user[@"photo_100"])]; self.statusLabel.text=OVKString(user[@"status"]); }
 
     };
-    [[OVKAPI shared] call:@"users.get" parameters:@{@"fields":@"photo_100,status"} cached:showProfile completion:^(id result,NSError *error) {
+    [[OVKAPI shared] call:@"users.get" parameters:@{@"fields":@"photo_100,photo_200,status"} cached:showProfile completion:^(id result,NSError *error) {
         if (!error) showProfile(result);
     }];
 }
@@ -181,21 +201,19 @@ static UIImage *OVKMenuGlyph(void) {
 }
 - (void)nowPlayingChanged:(NSNotification *)note {
     NSDictionary *media = [OVKMedia nowPlaying];
-    BOOL wasHidden = self.miniPlayer.hidden;
     self.miniPlayer.hidden = !media;
     self.miniTitle.text = media[@"title"];
     self.miniSubtitle.text = media[@"subtitle"];
     self.miniOpen.accessibilityLabel = self.miniTitle.text;
     self.miniOpen.accessibilityValue = self.miniSubtitle.text;
     self.miniOpen.accessibilityHint = OVKL(@"Открыть плеер");
-    self.miniNext.hidden = [media[@"video"] boolValue];
+    self.miniIsVideo = [media[@"video"] boolValue];
     self.miniNext.enabled = [media[@"next"] boolValue];
     self.miniNext.accessibilityLabel = OVKL(@"Следующий трек");
     BOOL playing = [media[@"playing"] boolValue];
     self.miniPlay.enabled = [media[@"ready"] boolValue];
     self.miniPlay.accessibilityLabel = playing ? OVKL(@"Пауза") : OVKL(@"Воспроизвести");
     [self.miniPlay setImage:[UIImage imageNamed:playing ? @"PauseTrack" : @"PlayTrack"] forState:UIControlStateNormal];
-    if (wasHidden!=self.miniPlayer.hidden && UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad) [self menuOrderChanged:nil];
     [self.view setNeedsLayout];
 }
 - (void)openMiniPlayer {
@@ -221,23 +239,27 @@ static UIImage *OVKMenuGlyph(void) {
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
     BOOL pad=UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad;
+    BOOL compact=[self compactSidebar];
     CGFloat width=[self menuWidth], height=self.view.bounds.size.height, headerHeight=86;
     self.sidebar.frame=CGRectMake(0,0,width,height);
     self.profileHeader.frame=CGRectMake(0,0,width,headerHeight);
-    CGFloat miniHeight=self.miniPlayer.hidden ? 0 : round(self.menu.rowHeight*1.5);
+    CGFloat miniHeight=self.miniPlayer.hidden ? 0 : (compact ? 54 : round(self.menu.rowHeight*1.5));
     self.menu.frame=CGRectMake(0,headerHeight,width,MAX(0,height-headerHeight-miniHeight));
     self.miniPlayer.frame=CGRectMake(0,height-miniHeight,width,miniHeight);
-    CGFloat buttonY=(miniHeight-38)/2, nextX=width-46, playX=self.miniNext.hidden ? nextX : nextX-44;
+    self.miniTitle.hidden=compact; self.miniSubtitle.hidden=compact; self.miniOpen.hidden=compact;
+    self.miniNext.hidden=compact || self.miniIsVideo;
+    CGFloat buttonY=(miniHeight-38)/2, nextX=width-46;
+    CGFloat playX=compact ? (width-38)/2 : (self.miniNext.hidden ? nextX : nextX-44);
     self.miniPlay.frame=CGRectMake(playX,buttonY,38,38);
     self.miniNext.frame=CGRectMake(nextX,buttonY,38,38);
     self.miniTitle.frame=CGRectMake(12,(miniHeight-40)/2,MAX(0,playX-18),21);
     self.miniSubtitle.frame=CGRectMake(12,(miniHeight-40)/2+21,MAX(0,playX-18),17);
     self.miniOpen.frame=CGRectMake(0,0,MAX(0,playX),miniHeight);
-    BOOL compact=pad && width==64;
     self.nameLabel.hidden=compact; self.statusLabel.hidden=compact;
     self.nameLabel.frame=CGRectMake(73,19,MAX(0,width-85),25);
     self.statusLabel.frame=CGRectMake(73,44,MAX(0,width-85),32);
-    self.profileImage.frame=CGRectMake(compact ? 9.5 : 15,20,45,45);
+    CGFloat scale=[UIScreen mainScreen].scale;
+    self.profileImage.frame=CGRectMake(compact ? round((width-45)*scale/2)/scale : 15,20,45,45);
     CGFloat side=pad ? width : 0;
     CGAffineTransform transform=self.active.view.transform;
     self.active.view.transform=CGAffineTransformIdentity;
@@ -291,6 +313,15 @@ static UIImage *OVKMenuGlyph(void) {
     if (selectedRow != NSNotFound) [self.menu selectRowAtIndexPath:[NSIndexPath indexPathForRow:selectedRow inSection:0] animated:NO scrollPosition:UITableViewScrollPositionNone];
     UIViewController *root = [nav.viewControllers objectAtIndex:0];
     UIButton *menuButton = [UIButton buttonWithType:UIButtonTypeCustom]; menuButton.frame = CGRectMake(0,0,40,30); OVKStyleAssetButton(menuButton,@"NavButton"); [menuButton setImage:OVKMenuGlyph() forState:UIControlStateNormal]; menuButton.accessibilityLabel = OVKL(@"Меню"); [menuButton addTarget:self action:@selector(toggleMenu) forControlEvents:UIControlEventTouchUpInside]; root.navigationItem.leftBarButtonItem = UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad ? nil : [[UIBarButtonItem alloc] initWithCustomView:menuButton];
+}
+- (void)sidebarSwiped:(UISwipeGestureRecognizer *)gesture {
+    if (UI_USER_INTERFACE_IDIOM()!=UIUserInterfaceIdiomPad) { [self closeMenu]; return; }
+    BOOL compact=gesture.direction==UISwipeGestureRecognizerDirectionLeft;
+    if (compact==[self compactSidebar]) return;
+    self.padCompactOverride=@(compact);
+    [self.view setNeedsLayout];
+    [UIView animateWithDuration:.23 animations:^{ [self.view layoutIfNeeded]; }];
+    [self menuOrderChanged:nil];
 }
 - (void)swipeOpen { if (self.active.viewControllers.count == 1 && !self.opened) [self toggleMenu]; }
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gesture {

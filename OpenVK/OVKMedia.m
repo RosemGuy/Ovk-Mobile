@@ -443,7 +443,7 @@ static NSOperationQueue *OVKImageDecodeQueue(void) {
     NSString *source=OVKMediaURL(url); CGFloat edge=MAX(self.bounds.size.width,self.bounds.size.height);
     NSUInteger pixels=self.maxPixelSize ?: (edge>0 ? (NSUInteger)ceil(edge*[[UIScreen mainScreen] scale]) : OVKPreviewPixelLimit()); pixels=MAX(64,MIN(OVKPreviewPixelLimit(),pixels));
     if ([source isEqualToString:self.source] && self.loadedPixelSize==pixels && (self.task || self.imageReady)) return;
-    self.source=nil; [self.task cancel]; self.task=nil; self.source=source; self.loadedPixelSize=pixels; self.imageReady=NO; self.image=[UIImage imageNamed:@"Avatar"];
+    self.source=nil; [self.task cancel]; self.task=nil; self.source=source; self.loadedPixelSize=pixels; self.imageReady=NO; self.image=self.placeholderImage ?: [UIImage imageNamed:@"Avatar"];
     if (!source.length) return;
     __weak OVKRemoteImageView *weakSelf=self;
     self.task=[OVKMedia image:source maxPixelSize:pixels completion:^(UIImage *image,NSError *error) { if (![weakSelf.source isEqualToString:source] || weakSelf.loadedPixelSize!=pixels) return; weakSelf.task=nil; if (image) { weakSelf.imageReady=YES; weakSelf.image=image; } }];
@@ -509,11 +509,12 @@ static NSURL *OVKStageExportFile(NSURL *source, BOOL video, BOOL move, NSError *
 
 @implementation OVKMediaExportMenu
 - (void)showFrom:(UIViewController *)owner item:(UIBarButtonItem *)item photo:(NSString *)photo video:(NSURL *)video {
-    if (self.menu || self.busy || (!photo.length && !video)) return;
+    if (self.menu || self.busy || !owner.view.window || (!photo.length && !video)) return;
     self.owner=owner; self.anchor=item; self.photoURL=photo; self.videoURL=video;
     self.menu=[[UIActionSheet alloc] initWithTitle:nil delegate:self cancelButtonTitle:OVKL(@"Отмена")
                            destructiveButtonTitle:nil otherButtonTitles:OVKL(@"Сохранить в Галерею"),OVKL(@"Поделиться"),nil];
-    [self.menu showFromBarButtonItem:item animated:YES];
+    if (UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad) [self.menu showFromBarButtonItem:item animated:YES];
+    else [self.menu showInView:owner.view.window];
 }
 - (void)actionSheet:(UIActionSheet *)sheet didDismissWithButtonIndex:(NSInteger)index {
     NSString *photo=self.photoURL;
@@ -522,7 +523,7 @@ static NSURL *OVKStageExportFile(NSURL *source, BOOL video, BOOL move, NSError *
     if (index!=0 && index!=1) { self.anchor=nil; return; }
     self.busy=YES;
     OVKDownloadCompletion ready=^(NSURL *file,NSError *error) {
-        if (!file || !self.owner.view.window) { [self finishFile:file error:error saved:NO]; return; }
+        if (!file || !self.owner.view.window) { [self finishFile:file error:error]; return; }
         if (index==0) [self saveFile:file video:video!=nil];
         else [self shareFile:file];
     };
@@ -554,21 +555,20 @@ static NSURL *OVKStageExportFile(NSURL *source, BOOL video, BOOL move, NSError *
         });
     });
 }
-- (void)finishFile:(NSURL *)file error:(NSError *)error saved:(BOOL)saved {
+- (void)finishFile:(NSURL *)file error:(NSError *)error {
     if (file) [[NSFileManager defaultManager] removeItemAtURL:file error:NULL];
     self.busy=NO; self.anchor=nil; self.library=nil;
     if (!self.owner.view.window) return;
     if (error) OVKAlert(OVKL(@"Не удалось экспортировать файл"),error.localizedDescription);
-    else if (saved) OVKAlert(OVKL(@"Сохранено в Галерее"),nil);
 }
 - (void)saveFile:(NSURL *)file video:(BOOL)video {
     self.library=[[ALAssetsLibrary alloc] init];
     void (^finished)(NSURL *,NSError *)=^(NSURL *asset,NSError *error) {
-        dispatch_async(dispatch_get_main_queue(), ^{ [self finishFile:file error:error saved:asset!=nil]; });
+        dispatch_async(dispatch_get_main_queue(), ^{ [self finishFile:file error:error]; });
     };
     if (video) {
         if (![self.library videoAtPathIsCompatibleWithSavedPhotosAlbum:file]) {
-            [self finishFile:file error:MediaError(1,OVKL(@"Галерея не поддерживает формат этого видео")) saved:NO];
+            [self finishFile:file error:MediaError(1,OVKL(@"Галерея не поддерживает формат этого видео"))];
             return;
         }
         [self.library writeVideoAtPathToSavedPhotosAlbum:file completionBlock:finished];
@@ -577,11 +577,11 @@ static NSURL *OVKStageExportFile(NSURL *source, BOOL video, BOOL move, NSError *
     NSError *error=nil;
     NSData *image=[NSData dataWithContentsOfURL:file options:NSDataReadingMappedIfSafe error:&error];
     if (image) [self.library writeImageDataToSavedPhotosAlbum:image metadata:nil completionBlock:finished];
-    else [self finishFile:file error:error saved:NO];
+    else [self finishFile:file error:error];
 }
 - (void)shareFile:(NSURL *)file {
     UIViewController *owner=self.owner;
-    if (!owner.view.window || owner.presentedViewController) { [self finishFile:file error:nil saved:NO]; return; }
+    if (!owner.view.window || owner.presentedViewController) { [self finishFile:file error:nil]; return; }
     UIActivityViewController *share=[[UIActivityViewController alloc] initWithActivityItems:@[file] applicationActivities:nil];
     self.sharedFile=file;
     __weak OVKMediaExportMenu *weakSelf=self;
@@ -612,7 +612,7 @@ static NSURL *OVKStageExportFile(NSURL *source, BOOL video, BOOL move, NSError *
     self.popover.delegate=nil;
     [self.popover dismissPopoverAnimated:YES];
     self.popover=nil;
-    [self finishFile:file error:nil saved:NO];
+    [self finishFile:file error:nil];
 }
 - (void)popoverControllerDidDismissPopover:(UIPopoverController *)popoverController { [self finishSharing]; }
 - (void)dealloc {
@@ -1420,7 +1420,8 @@ void OVKPresentPhoto(UIViewController *presenter, OVKPhotoController *photo) {
     [self.musicTimeline addSubview:self.musicFavorite];
     [self updateMusicFavorite];
     self.musicRepeatOne=[[UILabel alloc] initWithFrame:CGRectMake(31,2,10,12)]; self.musicRepeatOne.text=@"1"; self.musicRepeatOne.textColor=[UIColor whiteColor]; self.musicRepeatOne.backgroundColor=[UIColor clearColor]; self.musicRepeatOne.font=[UIFont boldSystemFontOfSize:10]; [self.musicRepeat addSubview:self.musicRepeatOne];
-    self.musicCover=[[OVKRemoteImageView alloc] initWithImage:[UIImage imageNamed:@"MusicCover"]]; self.musicCover.contentMode=UIViewContentModeScaleAspectFit; [self.musicView addSubview:self.musicCover];
+    UIImage *placeholder=[UIImage imageNamed:@"MusicCover"];
+    self.musicCover=[[OVKRemoteImageView alloc] initWithImage:placeholder]; self.musicCover.placeholderImage=placeholder; self.musicCover.contentMode=UIViewContentModeScaleAspectFit; [self.musicView addSubview:self.musicCover];
     NSDictionary *object=OVKDictionary(self.item[@"object"]),*album=OVKDictionary(object[@"album"]);
     CGFloat titleWidth=MAX(90,MIN(280,self.view.bounds.size.width-170)); UIView *heading=[[UIView alloc] initWithFrame:CGRectMake(0,0,titleWidth,40)];
     NSArray *lines=@[OVKString(object[@"artist"]),OVKString(object[@"title"]).length ? OVKString(object[@"title"]) : self.title,OVKString(album[@"title"])];
@@ -1467,7 +1468,22 @@ void OVKPresentPhoto(UIViewController *presenter, OVKPhotoController *photo) {
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)path {
     UITableViewCell *cell=[tableView dequeueReusableCellWithIdentifier:@"music-queue"]; if (!cell) cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"music-queue"];
     cell.showsReorderControl=self.queue.count>1;
-    NSDictionary *item=OVKDictionary(self.queue[path.row]),*object=OVKDictionary(item[@"object"]); cell.textLabel.text=OVKString(object[@"title"]).length ? OVKString(object[@"title"]) : OVKString(item[@"title"]); cell.textLabel.font=[UIFont systemFontOfSize:15]; cell.textLabel.textColor=path.row==self.queueIndex ? [UIColor colorWithRed:.4 green:.7 blue:1 alpha:1] : [UIColor whiteColor]; cell.detailTextLabel.text=OVKString(OVKDictionary(item[@"object"])[@"artist"]); cell.detailTextLabel.textColor=[UIColor lightGrayColor]; cell.backgroundColor=[UIColor colorWithWhite:path.row==self.queueIndex ? .23 : .16 alpha:1]; cell.contentView.backgroundColor=cell.backgroundColor; cell.accessoryType=UITableViewCellAccessoryNone; cell.indentationWidth=16; cell.indentationLevel=2;
+    BOOL current=path.row==self.queueIndex;
+    NSDictionary *item=OVKDictionary(self.queue[path.row]),*object=OVKDictionary(item[@"object"]);
+    NSString *title=OVKString(object[@"title"]);
+    cell.textLabel.text=title.length ? title : OVKString(item[@"title"]);
+    cell.textLabel.font=[UIFont systemFontOfSize:15];
+    cell.textLabel.textColor=current ? [UIColor colorWithRed:.4 green:.7 blue:1 alpha:1] : [UIColor whiteColor];
+    cell.detailTextLabel.text=OVKString(object[@"artist"]);
+    cell.detailTextLabel.textColor=[UIColor lightGrayColor];
+    // The editing control sits outside contentView. Color the full row behind it.
+    if (!cell.backgroundView) cell.backgroundView=[[UIView alloc] initWithFrame:CGRectZero];
+    cell.backgroundColor=[UIColor clearColor];
+    cell.backgroundView.backgroundColor=[UIColor colorWithWhite:current ? .23 : .16 alpha:1];
+    cell.contentView.backgroundColor=[UIColor clearColor];
+    cell.textLabel.backgroundColor=[UIColor clearColor];
+    cell.detailTextLabel.backgroundColor=[UIColor clearColor];
+    cell.accessoryType=UITableViewCellAccessoryNone; cell.indentationWidth=16; cell.indentationLevel=2;
     UILabel *number=(UILabel *)[cell.contentView viewWithTag:3201]; if (!number) { number=[[UILabel alloc] initWithFrame:CGRectMake(5,0,30,48)]; number.tag=3201; number.backgroundColor=[UIColor clearColor]; number.textAlignment=NSTextAlignmentCenter; number.font=[UIFont boldSystemFontOfSize:14]; [cell.contentView addSubview:number]; } number.text=path.row==self.queueIndex ? (self.music.playing ? @"▶" : @"II") : [NSString stringWithFormat:@"%ld",(long)path.row+1]; number.textColor=cell.textLabel.textColor; return cell;
 }
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)path { [tableView deselectRowAtIndexPath:path animated:YES]; if (self.musicPrepared && (NSUInteger)path.row!=self.queueIndex) [self playQueueIndex:path.row]; }

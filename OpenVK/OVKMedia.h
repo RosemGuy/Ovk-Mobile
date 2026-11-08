@@ -19,6 +19,7 @@ extern NSString * const OVKNowPlayingChanged;
 @end
 @interface OVKRemoteImageView : UIImageView
 @property (copy, nonatomic) NSString *source;
+@property (strong, nonatomic) UIImage *placeholderImage;
 @property (assign, nonatomic) NSUInteger maxPixelSize;
 - (void)load:(NSString *)url;
 @end

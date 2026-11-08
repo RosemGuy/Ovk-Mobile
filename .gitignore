@@ -18,6 +18,7 @@ __pycache__/
 *.py[cod]
 xcuserdata/
 *.xcuserstate
+._*
 
 # Generated illustrative previews
 /Feed-profile-preview.png

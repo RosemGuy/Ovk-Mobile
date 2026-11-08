@@ -21,7 +21,7 @@ for p in sorted(a.iterdir()):
   build=obj('build'+p.name,f'isa = PBXBuildFile; fileRef = {ref};')
   (sources if p.suffix in ['.m','.c'] else resources).append(build)
 frameworks=[];frameworkrefs=[]
-for name in ['UIKit','Foundation','CoreGraphics','Security','QuartzCore','ImageIO','CoreMedia','MediaPlayer','AVFoundation','AudioToolbox']:
+for name in ['UIKit','Foundation','CoreGraphics','Security','QuartzCore','ImageIO','CoreMedia','MediaPlayer','AVFoundation','AudioToolbox','SystemConfiguration','AssetsLibrary']:
  ref=obj(name,f'isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = {name}.framework; path = System/Library/Frameworks/{name}.framework; sourceTree = SDKROOT;');frameworkrefs.append(ref)
  frameworks.append(obj('build'+name,f'isa = PBXBuildFile; fileRef = {ref};'))
 prod=obj('product','isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenVKClassic.app; sourceTree = BUILT_PRODUCTS_DIR;')

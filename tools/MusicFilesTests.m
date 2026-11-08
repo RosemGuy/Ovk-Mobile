@@ -18,7 +18,34 @@ int main(int argc,const char *argv[]) {
         Expect(!OVKImportAudioURLIntoDirectory([NSURL URLWithString:@"https://example.invalid/test.mp3"],music,&error),"Remote URL is not imported as local");
         Expect(!OVKImportAudioURLIntoDirectory([NSURL fileURLWithPath:music],music,&error),"Directory is not an audio file");
         Expect([[NSFileManager defaultManager] fileExistsAtPath:source.path],"Original file is preserved");
+        NSString *favoriteName = [root.lastPathComponent stringByAppendingPathExtension:@"wav"];
+        NSString *favoritePath = [music stringByAppendingPathComponent:favoriteName];
+        NSString *sameNameInDocuments = [documents stringByAppendingPathComponent:favoriteName];
+        Expect(!OVKLocalMusicIsFavorite(favoritePath),"New local track is not a favorite");
+        OVKSetLocalMusicFavorite(favoritePath,YES);
+        OVKSetLocalMusicFavorite(favoritePath,YES);
+        Expect(OVKLocalMusicIsFavorite(favoritePath),"Local favorite can be read after saving");
+        Expect(!OVKLocalMusicIsFavorite(sameNameInDocuments),"Same file names in different folders are independent");
+        OVKSetLocalMusicFavorite(favoritePath,NO);
+        Expect(!OVKLocalMusicIsFavorite(favoritePath),"Removing a local favorite clears it");
+
+        NSString *server = [NSString stringWithFormat:@"https://cache-test.invalid/%@",root.lastPathComponent];
+        NSString *scope = OVKMusicCacheScope(server,@1);
+        NSString *otherScope = OVKMusicCacheScope(server,@2);
+        Expect(scope.length==64 && ![scope isEqualToString:otherScope],"Cache scope distinguishes accounts");
+        NSURL *download = [NSURL fileURLWithPath:[root stringByAppendingPathComponent:@"download"]];
+        Expect([[NSFileManager defaultManager] copyItemAtURL:source toURL:download error:&error],"Stage an audio download");
+        NSDictionary *track = @{@"type":@"audio",@"title":@"Offline test",@"object":@{@"id":@2,@"owner_id":@(-1)}};
+        Expect(OVKStoreMusicCacheFile(scope,@"-1_2",download,@"wav",track,&error),"Store a completed track");
+        NSURL *cached = OVKMusicCacheURL(scope,@"-1_2");
+        Expect(cached!=nil && OVKMusicCacheURL(otherScope,@"-1_2")==nil,"Only the owning account sees a cached file");
+        NSArray *cacheEntries = OVKMusicCacheEntries(scope);
+        Expect(cacheEntries.count==1 && [cacheEntries[0][@"size"] unsignedLongLongValue]>0,"Cache entry contributes to the size");
+        Expect(OVKRemoveMusicCacheEntry(scope,@"-1_2",&error),"Remove one cached track");
+        Expect(OVKMusicCacheEntries(scope).count==0 && OVKMusicCacheURL(scope,@"-1_2")==nil,"Removal clears the track and its metadata");
+        NSURL *scopeDirectory = [[cached URLByDeletingLastPathComponent] URLByDeletingLastPathComponent];
+        [[NSFileManager defaultManager] removeItemAtURL:scopeDirectory error:NULL];
         [[NSFileManager defaultManager] removeItemAtPath:root error:NULL];
-        puts("PASS: local imports, duplicates, catalog, partial-file exclusion, source preservation");
+        puts("PASS: local imports, catalog, favorites and isolated offline cache");
     } return 0;
 }
